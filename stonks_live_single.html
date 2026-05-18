@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stonks Live Test Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #06090c;
+        --panel: #10161a;
+        --panel-2: #0b1115;
+        --line: #243238;
+        --ink: #edf4f2;
+        --muted: #8fa29d;
+        --green: #29d17d;
+        --red: #ff5c63;
+        --gold: #f0b95a;
+        --blue: #6ab8ff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top left, #102018 0, transparent 360px), var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      header {
+        align-items: center;
+        background: #0b1115;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 18px;
+        justify-content: space-between;
+        padding: 18px clamp(14px, 4vw, 44px);
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 19px; }
+      h3 { font-size: 14px; margin: 14px 0 8px; }
+      main {
+        display: grid;
+        gap: 16px;
+        margin: 0 auto;
+        max-width: 1260px;
+        padding: 18px clamp(12px, 3vw, 30px) 40px;
+      }
+      .eyebrow {
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      .controls {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      input, button, select {
+        border-radius: 7px;
+        font: inherit;
+        min-height: 40px;
+      }
+      input {
+        background: #10171b;
+        border: 1px solid #465254;
+        color: var(--ink);
+        padding: 0 11px;
+      }
+      select {
+        background: #10171b;
+        border: 1px solid #465254;
+        color: var(--ink);
+        padding: 0 10px;
+      }
+      #api-base { width: min(420px, 55vw); }
+      #ticker-input { text-transform: uppercase; width: 110px; }
+      button {
+        background: var(--gold);
+        border: 0;
+        color: #11171a;
+        cursor: pointer;
+        font-weight: 800;
+        padding: 0 14px;
+      }
+      .status {
+        background: #151d16;
+        border: 1px solid #2f5139;
+        border-radius: 8px;
+        color: #b8e8ca;
+        padding: 12px 14px;
+      }
+      .grid { display: grid; gap: 16px; }
+      .top-grid { grid-template-columns: minmax(0, 1.35fr) minmax(360px, .85fr); }
+      .hero-grid { grid-template-columns: 1fr 1fr 2fr; }
+      .detail-grid { grid-template-columns: 1fr 1fr; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .panel-head {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .leader-list, .projection-list, .item-list, .metric-list {
+        display: grid;
+        gap: 10px;
+      }
+      .leader-row {
+        align-items: center;
+        background: var(--panel-2);
+        border: 1px solid #1f2c32;
+        border-radius: 8px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 92px minmax(120px, 1fr) 92px 92px 150px;
+        min-height: 72px;
+        padding: 10px;
+      }
+      .ticker { font-size: 18px; font-weight: 850; }
+      .muted, .company, time { color: var(--muted); font-size: 12px; }
+      .company {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .positive { color: var(--green); }
+      .negative { color: var(--red); }
+      .sparkline { height: 42px; width: 150px; }
+      .pill {
+        background: #11251c;
+        border: 1px solid #235a3d;
+        border-radius: 999px;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 6px 10px;
+      }
+      .projection-card, .metric, .item {
+        background: var(--panel-2);
+        border: 1px solid #1f2c32;
+        border-radius: 8px;
+        padding: 11px;
+      }
+      .projection-card header {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .projection-card p, .item p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.42;
+        margin-top: 7px;
+      }
+      .quote-price {
+        font-size: 40px;
+        font-weight: 850;
+        margin-top: 10px;
+      }
+      .score-ring {
+        align-items: baseline;
+        background: #0e2419;
+        border: 1px solid #24543b;
+        border-radius: 8px;
+        color: var(--green);
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
+        padding: 20px;
+      }
+      .score-ring span { font-size: 42px; font-weight: 900; }
+      .metric-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric span { color: var(--muted); display: block; font-size: 12px; }
+      .metric strong { display: block; margin-top: 4px; }
+      .chart-wrap { height: 360px; }
+      a { color: var(--blue); text-decoration: none; }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      li { color: var(--muted); margin-bottom: 7px; }
+      pre {
+        background: #050708;
+        border-radius: 8px;
+        color: #d7e6e2;
+        overflow: auto;
+        padding: 12px;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 900px) {
+        header, .panel-head { align-items: stretch; flex-direction: column; }
+        .top-grid, .hero-grid, .detail-grid { grid-template-columns: 1fr; }
+        .leader-row { grid-template-columns: 1fr 1fr; }
+        .sparkline { width: 100%; }
+        #api-base { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Single-file live test</p>
+        <h1>Stonks Live Dashboard</h1>
+      </div>
+      <form class="controls" id="ticker-form">
+        <input id="api-base" value="http://127.0.0.1:8001" aria-label="API base URL" />
+        <input id="ticker-input" value="AAPL" aria-label="Ticker" />
+        <button type="submit">Analyze</button>
+        <button type="button" id="refresh-feed">Refresh Feed</button>
+      </form>
+    </header>
+
+    <main>
+      <section id="status" class="status">Ready. Start the backend, add API keys, then refresh live data.</section>
+
+      <section class="grid top-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Live screener</p>
+              <h2>Top Under-$1 Movers</h2>
+            </div>
+            <span id="leaders-freshness" class="muted">Waiting...</span>
+          </div>
+          <div id="leader-list" class="leader-list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Top Projections</p>
+              <h2>Live Research Feed</h2>
+            </div>
+            <span id="ai-provider" class="pill">rules engine</span>
+          </div>
+          <p id="ai-summary" class="muted">Projection feed will appear here.</p>
+          <div id="projection-list" class="projection-list"></div>
+        </article>
+      </section>
+
+      <section class="grid hero-grid">
+        <article class="panel">
+          <p class="eyebrow">Quote</p>
+          <h2 id="quote-symbol">--</h2>
+          <div id="quote-price" class="quote-price">--</div>
+          <div id="quote-change" class="muted">--</div>
+          <p id="quote-freshness" class="muted">Provider and freshness will appear here.</p>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">Research Classification</p>
+          <h2 id="rating-label">Needs more data</h2>
+          <div class="score-ring"><span id="composite-score">--</span><small>/100</small></div>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">Company</p>
+          <h2 id="profile-name">--</h2>
+          <p id="profile-meta" class="muted">--</p>
+          <p id="profile-description" class="muted">Company profile will appear here.</p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Scenario Calculator</p>
+            <h2>Projected Outcome If Current Rate Continues</h2>
+          </div>
+          <div class="controls">
+            <input id="scenario-amount" type="number" min="0" step="1" value="1000" aria-label="Dollar amount" />
+            <input id="scenario-periods" type="number" min="1" max="3650" step="1" value="5" aria-label="Periods" />
+            <select id="scenario-mode" aria-label="Projection mode">
+              <option value="daily">Daily</option>
+              <option value="hourly">Hourly</option>
+            </select>
+            <button type="button" id="scenario-run">Calculate</button>
+          </div>
+        </div>
+        <div id="scenario-output" class="projection-card">
+          <p>Enter an amount and calculate a scenario from the current observed rate.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Daily OHLCV</p>
+            <h2>Price Chart</h2>
+          </div>
+          <span class="muted">Close / SMA20 / SMA50 / SMA200</span>
+        </div>
+        <div class="chart-wrap"><canvas id="price-chart"></canvas></div>
+      </section>
+
+      <section class="grid detail-grid">
+        <article class="panel">
+          <p class="eyebrow">Technical Indicators</p>
+          <div id="technical-list" class="metric-list"></div>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">AI Research Brief</p>
+          <div id="ai-brief" class="item">
+            <p>Load a ticker to generate a research brief from backend-fetched data.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid detail-grid">
+        <article class="panel">
+          <p class="eyebrow">Evidence</p>
+          <h3>Bull Case</h3><ul id="bull-case"></ul>
+          <h3>Bear Case</h3><ul id="bear-case"></ul>
+          <h3>Risk Notes</h3><ul id="risk-notes"></ul>
+        </article>
+      </section>
+
+      <section class="grid detail-grid">
+        <article class="panel">
+          <p class="eyebrow">News</p>
+          <div id="news-list" class="item-list"></div>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">SEC Filings</p>
+          <div id="filing-list" class="item-list"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <p class="eyebrow">Data Health / Tracking</p>
+        <pre id="health-json">Loading...</pre>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#ticker-form");
+      const apiBaseInput = document.querySelector("#api-base");
+      const tickerInput = document.querySelector("#ticker-input");
+      let priceChart;
+
+      if (location.protocol.startsWith("http")) {
+        apiBaseInput.value = location.origin;
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        loadTicker(tickerInput.value.trim() || "AAPL");
+      });
+      document.querySelector("#refresh-feed").addEventListener("click", () => loadFeed(true));
+      document.querySelector("#scenario-run").addEventListener("click", () => loadScenario(tickerInput.value.trim() || "AAPL"));
+
+      loadEverything();
+
+      async function loadEverything() {
+        await Promise.all([loadFeed(false), loadTicker(tickerInput.value), loadHealth()]);
+      }
+
+      function api(path) {
+        return `${apiBaseInput.value.replace(/\/$/, "")}${path}`;
+      }
+
+      async function getJson(path, options = {}) {
+        const response = await fetch(api(`${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`), { cache: "no-store", ...options });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        return response.json();
+      }
+
+      async function loadFeed(forceRefresh) {
+        setStatus(forceRefresh ? "Refreshing under-$1 live feed..." : "Loading under-$1 live feed...");
+        try {
+          const data = forceRefresh
+            ? await getJson("/api/under-dollar-leaders/refresh", { method: "POST" })
+            : await getJson("/api/under-dollar-leaders");
+          renderFeed(data);
+          await loadHealth();
+          setStatus("Live feed loaded. Results are research support only.");
+        } catch (error) {
+          setStatus(`Feed error: ${error.message}`);
+        }
+      }
+
+      async function loadTicker(symbol) {
+        setStatus(`Loading ${symbol.toUpperCase()}...`);
+        try {
+          const data = await getJson(`/api/ticker/${encodeURIComponent(symbol)}`);
+          renderTicker(data);
+          loadAiBrief(symbol);
+          loadScenario(symbol);
+          await loadHealth();
+          setStatus("Ticker loaded. Results are research support only.");
+        } catch (error) {
+          setStatus(`Ticker error: ${error.message}`);
+        }
+      }
+
+      async function loadHealth() {
+        try {
+          const health = await getJson("/api/data-health");
+          document.querySelector("#health-json").textContent = JSON.stringify(health, null, 2);
+        } catch (error) {
+          document.querySelector("#health-json").textContent = `Health unavailable: ${error.message}`;
+        }
+      }
+
+      async function loadAiBrief(symbol) {
+        const panel = document.querySelector("#ai-brief");
+        panel.innerHTML = `<p>Generating research brief...</p>`;
+        try {
+          const brief = await getJson(`/api/ticker/${encodeURIComponent(symbol)}/ai-summary`);
+          panel.innerHTML = `
+            <p>${brief.summary}</p>
+            <h3>Watch Items</h3>
+            <ul>${(brief.watch_items || []).map((item) => `<li>${item}</li>`).join("")}</ul>
+            <h3>Risks</h3>
+            <ul>${(brief.risks || []).slice(0, 4).map((item) => `<li>${item}</li>`).join("")}</ul>
+            <p class="muted">${brief.generated_by} / confidence: ${brief.confidence} / sources: ${(brief.data_sources_used || []).join(", ") || "available backend data"}</p>
+          `;
+        } catch (error) {
+          panel.innerHTML = `<p>AI brief unavailable: ${error.message}</p>`;
+        }
+      }
+
+      async function loadScenario(symbol) {
+        const amount = Number(document.querySelector("#scenario-amount").value || 0);
+        const periods = Number(document.querySelector("#scenario-periods").value || 1);
+        const mode = document.querySelector("#scenario-mode").value;
+        const output = document.querySelector("#scenario-output");
+        output.innerHTML = `<p>Calculating scenario...</p>`;
+        try {
+          const scenario = await getJson(`/api/ticker/${encodeURIComponent(symbol)}/projection-scenario?amount=${encodeURIComponent(amount)}&mode=${encodeURIComponent(mode)}&periods=${encodeURIComponent(periods)}`);
+          const gainClass = scenario.projected_gain_loss >= 0 ? "positive" : "negative";
+          output.innerHTML = `
+            <header><strong>${scenario.symbol} ${scenario.mode} scenario</strong><span class="${gainClass}">${money(scenario.projected_value)}</span></header>
+            <p>${scenario.explanation}</p>
+            <ul>
+              <li>Rate used: ${number(scenario.rate_percent_per_period)}% per ${scenario.mode} period</li>
+              <li>Gain/loss: <span class="${gainClass}">${money(scenario.projected_gain_loss)} (${number(scenario.projected_gain_loss_percent)}%)</span></li>
+              <li>Source: ${scenario.source_label}</li>
+            </ul>
+            <p class="muted">${(scenario.warnings || []).join(" ")}</p>
+          `;
+        } catch (error) {
+          output.innerHTML = `<p>Scenario unavailable: ${error.message}</p>`;
+        }
+      }
+
+      function renderFeed(data) {
+        document.querySelector("#leaders-freshness").textContent = `Generated ${dateTime(data.generated_at)}`;
+        document.querySelector("#ai-provider").textContent = data.ai_provider || "rules engine";
+        document.querySelector("#ai-summary").textContent = data.ai_summary || (data.warnings || []).join(" ");
+        document.querySelector("#leader-list").innerHTML = data.leaders.length
+          ? data.leaders.map(renderLeader).join("")
+          : `<p class="muted">No live mover rows yet. Add FMP_API_KEY in .env, then restart the backend.</p>`;
+        requestAnimationFrame(() => {
+          for (const leader of data.leaders) drawSparkline(`spark-${leader.symbol}`, leader.sparkline || [], leader.change_percent);
+        });
+        document.querySelector("#projection-list").innerHTML = data.projections.length
+          ? data.projections.map(renderProjection).join("")
+          : `<p class="muted">No projections yet. Provider rows are needed before projection cards can be ranked.</p>`;
+      }
+
+      function renderLeader(item) {
+        const trend = Number(item.change_percent || 0) >= 0 ? "positive" : "negative";
+        return `<div class="leader-row">
+          <div><div class="ticker">${item.symbol}</div><div class="company">${item.exchange || ""}</div></div>
+          <div class="company">${item.name || "Unknown company"}</div>
+          <div><strong>${money(item.price)}</strong><div class="muted">price</div></div>
+          <div class="${trend}"><strong>${number(item.change_percent)}%</strong><div class="muted">move</div></div>
+          <canvas id="spark-${item.symbol}" class="sparkline" width="300" height="84"></canvas>
+        </div>`;
+      }
+
+      function renderProjection(item) {
+        const evidence = (item.evidence || []).slice(0, 2).map((value) => `<li>${value}</li>`).join("");
+        const risks = (item.risks || []).slice(0, 1).map((value) => `<li>${value}</li>`).join("");
+        return `<div class="projection-card">
+          <header><strong>${item.symbol} / ${item.label}</strong><span class="positive">${number(item.score)}</span></header>
+          <p>${item.thesis}</p><ul>${evidence}${risks}</ul>
+        </div>`;
+      }
+
+      function renderTicker(data) {
+        const quote = data.quote;
+        document.querySelector("#quote-symbol").textContent = data.symbol;
+        document.querySelector("#quote-price").textContent = quote?.price ? money(quote.price) : "--";
+        const change = document.querySelector("#quote-change");
+        change.textContent = quote?.change !== undefined && quote?.change !== null
+          ? `${number(quote.change)} (${number(quote.change_percent)}%)`
+          : "--";
+        change.className = quote?.change >= 0 ? "positive" : "negative";
+        document.querySelector("#quote-freshness").textContent = quote?.freshness
+          ? `${quote.freshness.display_note} Fetched ${dateTime(quote.freshness.fetched_at)}.`
+          : "Quote unavailable. Add FMP_API_KEY or ALPHA_VANTAGE_API_KEY in .env.";
+        document.querySelector("#rating-label").textContent = data.score.rating_label;
+        document.querySelector("#composite-score").textContent = number(data.score.composite_score);
+        document.querySelector("#profile-name").textContent = data.profile?.name || "--";
+        document.querySelector("#profile-meta").textContent = [data.profile?.exchange, data.profile?.sector, data.profile?.industry].filter(Boolean).join(" / ") || "--";
+        document.querySelector("#profile-description").textContent = data.profile?.description || "Profile unavailable.";
+        fillList("#bull-case", data.score.bull_case);
+        fillList("#bear-case", data.score.bear_case);
+        fillList("#risk-notes", [...data.score.risk_notes, ...data.score.data_warnings]);
+        renderTechnicals(data.indicators);
+        renderNews(data.news);
+        renderFilings(data.filings);
+        renderChart(data.historical);
+      }
+
+      function renderTechnicals(indicators) {
+        const metrics = [
+          ["SMA 20", indicators.sma_20], ["SMA 50", indicators.sma_50], ["SMA 200", indicators.sma_200],
+          ["RSI 14", indicators.rsi_14], ["MACD", indicators.macd], ["ATR 14", indicators.atr_14],
+          ["Rel Volume", indicators.relative_volume], ["52W High Dist", percent(indicators.high_52_week_distance)]
+        ];
+        document.querySelector("#technical-list").innerHTML = metrics.map(([label, value]) =>
+          `<div class="metric"><span>${label}</span><strong>${formatValue(value)}</strong></div>`
+        ).join("");
+      }
+
+      function renderNews(news) {
+        document.querySelector("#news-list").innerHTML = news.length
+          ? news.slice(0, 10).map((item) => `<div class="item"><a href="${item.url}" target="_blank">${item.headline}</a><p>${item.source_name} / ${dateTime(item.published_at)} / sentiment ${number(item.sentiment_score)}</p></div>`).join("")
+          : `<p class="muted">No recent news available from configured providers.</p>`;
+      }
+
+      function renderFilings(filings) {
+        document.querySelector("#filing-list").innerHTML = filings.length
+          ? filings.slice(0, 10).map((item) => `<div class="item"><a href="${item.url}" target="_blank">${item.filing_type}</a><p>${item.filing_date || ""} / ${item.source}</p></div>`).join("")
+          : `<p class="muted">No SEC filings found.</p>`;
+      }
+
+      function renderChart(rows) {
+        const closes = rows.map((row) => row.close);
+        const labels = rows.map((row) => row.date);
+        priceChart?.destroy();
+        priceChart = new Chart(document.querySelector("#price-chart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              dataset("Close", closes, "#29d17d", 2),
+              dataset("SMA20", movingAverage(closes, 20), "#6ab8ff", 1),
+              dataset("SMA50", movingAverage(closes, 50), "#f0b95a", 1),
+              dataset("SMA200", movingAverage(closes, 200), "#ff5c63", 1)
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#edf4f2" } } },
+            scales: {
+              x: { ticks: { color: "#91a29e", maxTicksLimit: 8 }, grid: { color: "#182329" } },
+              y: { ticks: { color: "#91a29e" }, grid: { color: "#182329" } }
+            }
+          }
+        });
+      }
+
+      function drawSparkline(canvasId, points, changePercent) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || points.length < 2) return;
+        const values = points.map((point) => Number(point.close)).filter((value) => !Number.isNaN(value));
+        if (values.length < 2) return;
+        const ctx = canvas.getContext("2d");
+        const min = Math.min(...values), max = Math.max(...values), range = max - min || 1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = Number(changePercent || 0) >= 0 ? "#29d17d" : "#ff5c63";
+        ctx.lineWidth = 4; ctx.beginPath();
+        values.forEach((value, index) => {
+          const x = (index / (values.length - 1)) * canvas.width;
+          const y = canvas.height - ((value - min) / range) * (canvas.height - 10) - 5;
+          index ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      function movingAverage(values, period) {
+        return values.map((_, index) => index + 1 < period ? null : values.slice(index + 1 - period, index + 1).reduce((sum, value) => sum + value, 0) / period);
+      }
+      function dataset(label, data, color, width) {
+        return { label, data, borderColor: color, borderWidth: width, pointRadius: 0, tension: 0.18 };
+      }
+      function fillList(selector, items) {
+        document.querySelector(selector).innerHTML = (items || []).map((item) => `<li>${item}</li>`).join("");
+      }
+      function setStatus(message) { document.querySelector("#status").textContent = message; }
+      function money(value) { return value === null || value === undefined ? "--" : `$${Number(value).toFixed(4)}`; }
+      function number(value) { return value === null || value === undefined || Number.isNaN(Number(value)) ? "--" : Number(value).toFixed(2); }
+      function percent(value) { return value === null || value === undefined ? null : `${number(value)}%`; }
+      function formatValue(value) { return typeof value === "string" ? value : number(value); }
+      function dateTime(value) { return value ? new Date(value).toLocaleString() : "unknown time"; }
+    </script>
+  </body>
+</html>

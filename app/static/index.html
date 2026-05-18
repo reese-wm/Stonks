@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stonks Research Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Research support</p>
+        <h1>Stonks Dashboard</h1>
+      </div>
+      <form id="ticker-form" class="search">
+        <input id="ticker-input" type="text" value="AAPL" autocomplete="off" aria-label="Ticker symbol" />
+        <button type="submit">Analyze</button>
+      </form>
+    </header>
+
+    <main>
+      <section class="market-top">
+        <div class="feed-heading">
+          <div>
+            <p class="eyebrow">Live screener</p>
+            <h2>Top Under-$1 Movers</h2>
+          </div>
+          <p id="leaders-freshness">Waiting for provider data...</p>
+        </div>
+        <div class="market-grid">
+          <article class="feed-panel">
+            <div id="leader-list" class="leader-list"></div>
+          </article>
+          <article class="feed-panel projection-panel">
+            <div class="projection-head">
+              <div>
+                <p class="eyebrow">Top Projections</p>
+                <h2>Live Research Feed</h2>
+              </div>
+              <span id="ai-provider" class="source-pill">rules engine</span>
+            </div>
+            <p id="ai-summary" class="summary-copy">Projection feed will appear here.</p>
+            <div id="projection-list" class="projection-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="status-strip" id="status-strip">
+        Enter a ticker to load quote, chart, filings, news, and research scores.
+      </section>
+
+      <section class="tracking-strip">
+        <div>
+          <p class="eyebrow">Tracking</p>
+          <h2>Stored Market History</h2>
+        </div>
+        <div id="tracking-summary" class="tracking-summary">Loading tracking status...</div>
+      </section>
+
+      <section class="grid hero-grid">
+        <article class="panel quote-panel">
+          <p class="panel-label">Quote</p>
+          <h2 id="quote-symbol">--</h2>
+          <div class="quote-price" id="quote-price">--</div>
+          <div class="quote-change" id="quote-change">--</div>
+          <p class="freshness" id="quote-freshness">Provider and freshness will appear here.</p>
+        </article>
+
+        <article class="panel score-panel">
+          <p class="panel-label">Research Classification</p>
+          <h2 id="rating-label">Needs more data</h2>
+          <div class="score-ring">
+            <span id="composite-score">--</span>
+            <small>/ 100</small>
+          </div>
+        </article>
+
+        <article class="panel profile-panel">
+          <p class="panel-label">Company</p>
+          <h2 id="profile-name">--</h2>
+          <p id="profile-meta">--</p>
+          <p id="profile-description" class="description">Company profile will appear here.</p>
+        </article>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-label">Daily OHLCV</p>
+            <h2>Price Chart</h2>
+          </div>
+          <div class="legend">Close, SMA20, SMA50, SMA200</div>
+        </div>
+        <canvas id="price-chart"></canvas>
+      </section>
+
+      <section class="grid detail-grid">
+        <article class="panel">
+          <p class="panel-label">Technical Indicators</p>
+          <div id="technical-list" class="metric-list"></div>
+        </article>
+        <article class="panel">
+          <p class="panel-label">Evidence</p>
+          <div class="evidence-columns">
+            <div>
+              <h3>Bull Case</h3>
+              <ul id="bull-case"></ul>
+            </div>
+            <div>
+              <h3>Bear Case</h3>
+              <ul id="bear-case"></ul>
+            </div>
+          </div>
+          <h3>Risk Notes</h3>
+          <ul id="risk-notes"></ul>
+        </article>
+      </section>
+
+      <section class="grid detail-grid">
+        <article class="panel">
+          <p class="panel-label">Recent News</p>
+          <div id="news-list" class="item-list"></div>
+        </article>
+        <article class="panel">
+          <p class="panel-label">SEC Filings</p>
+          <div id="filing-list" class="item-list"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <p class="panel-label">Data Health</p>
+        <pre id="provider-status"></pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
