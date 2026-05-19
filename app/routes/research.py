@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -10,7 +11,18 @@ from app.providers.fmp import FMPProvider
 from app.providers.massive import MassiveProvider
 from app.providers.sec_edgar import SECEdgarProvider
 from app.providers.tipranks import TipRanksProvider
-from app.schemas.market import AIResearchBrief, AIStockStance, ProjectionScenario, QuantIntelligenceReport, TickerResearch, TopProjectedBuy, UnderDollarDashboard
+from app.schemas.market import (
+    AIResearchBrief,
+    AIStockStance,
+    ChartBar,
+    MassiveMarketInsight,
+    ProjectionScenario,
+    QuantIntelligenceReport,
+    TickerDirectoryItem,
+    TickerResearch,
+    TopProjectedBuy,
+    UnderDollarDashboard,
+)
 from app.services.ai_stance import build_ai_stock_stance
 from app.services.ai_summary import build_ai_research_brief
 from app.services.news_scoring import score_articles
@@ -50,12 +62,14 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
     profile = await _optional_call(fmp.profile(symbol), provider_status, "FMP profile")
 
     news_results = await asyncio.gather(
+        _optional_call(massive.news(symbol), provider_status, "Massive news"),
         _optional_call(fmp.news(symbol), provider_status, "FMP news"),
         _optional_call(alpha.news(symbol), provider_status, "Alpha Vantage news"),
     )
     news = score_articles([article for result in news_results if result for article in result])
     filings = await _optional_call(sec.company_filings(symbol), provider_status, "SEC filings") or []
     tipranks_insight = await _optional_call(tipranks.insight(symbol), provider_status, "TipRanks insights")
+    massive_insight = await _optional_call(massive.market_insight(symbol), provider_status, "Massive EMA/short-volume")
 
     if quote is None:
         warnings.append("Quote is unavailable. Add MASSIVE_API_KEY, FMP_API_KEY, or ALPHA_VANTAGE_API_KEY in .env.")
@@ -74,6 +88,7 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
         news=news,
         filings=filings,
         tipranks=tipranks_insight,
+        massive_insight=massive_insight,
         score=score,
         provider_status=provider_status,
     )
@@ -107,6 +122,45 @@ async def ticker_projection_scenario(
 ) -> ProjectionScenario:
     research = await ticker_research(symbol, db)
     return build_projection_scenario(research, amount=amount, mode=mode, periods=periods)
+
+
+@router.get("/ticker/{symbol}/bars", response_model=list[ChartBar])
+async def ticker_chart_bars(symbol: str, range: str = "1D") -> list[ChartBar]:
+    massive = MassiveProvider()
+    try:
+        bars = await massive.custom_bars(symbol, range_key=range)
+        if bars:
+            return bars
+    except ProviderError as error:
+        pass
+    try:
+        fallback = await massive.daily_prices(symbol, limit=370)
+    except ProviderError:
+        return []
+    return [
+        ChartBar(
+            timestamp=datetime.combine(row.date, datetime.min.time()),
+            label=row.date.isoformat(),
+            open=row.open,
+            high=row.high,
+            low=row.low,
+            close=row.close,
+            volume=row.volume,
+            provider=f"{row.provider} daily fallback",
+            timespan="1 day",
+        )
+        for row in fallback
+    ]
+
+
+@router.get("/ticker/{symbol}/massive-insight", response_model=MassiveMarketInsight)
+async def ticker_massive_insight(symbol: str) -> MassiveMarketInsight:
+    return await MassiveProvider().market_insight(symbol)
+
+
+@router.get("/tickers/search", response_model=list[TickerDirectoryItem])
+async def ticker_directory_search(q: str = "", limit: int = 25) -> list[TickerDirectoryItem]:
+    return await MassiveProvider().ticker_search(q, limit=limit)
 
 
 @router.get("/data-health")

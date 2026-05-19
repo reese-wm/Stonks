@@ -108,7 +108,7 @@
             </div>
             <div class="segmented"><button class="active" type="button">Buy</button><button type="button">Sell</button></div>
             <form id="ticker-form" class="trade-form">
-              <label>Symbol<input id="ticker-input" type="text" value="AAPL" autocomplete="off" /></label>
+              <label>Symbol<input id="ticker-input" type="text" value="AAPL" autocomplete="off" list="ticker-suggestions" /></label>
               <label>Order Type<select><option>Limit</option><option>Market</option></select></label>
               <label>Quantity<input type="number" value="100" min="1" /></label>
               <label>Limit Price<input id="limit-price" type="text" value="--" /></label>
@@ -176,6 +176,7 @@
           <section class="panel data-panel">
             <div class="panel-title"><h2>Data & Signals</h2><span id="leaders-freshness">Waiting for provider data...</span></div>
             <div id="tracking-summary" class="tracking-summary">Loading tracking status...</div>
+            <div id="massive-live-panel" class="metric-list compact"></div>
             <div id="technical-list" class="metric-list"></div>
             <div id="tipranks-panel" class="metric-list compact"></div>
             <details>
@@ -192,6 +193,8 @@
         </footer>
       </main>
     </div>
+
+    <datalist id="ticker-suggestions"></datalist>
 
     <div class="sr-only">
       <p id="profile-meta">--</p>

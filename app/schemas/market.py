@@ -33,6 +33,18 @@ class OHLCV(BaseModel):
     provider: str
 
 
+class ChartBar(BaseModel):
+    timestamp: datetime
+    label: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    provider: str
+    timespan: str
+
+
 class CompanyProfile(BaseModel):
     symbol: str
     name: str | None = None
@@ -126,6 +138,39 @@ class TipRanksInsight(BaseModel):
     fetched_at: datetime
     price_targets: TipRanksPriceTargets | None = None
     news_sentiment: TipRanksNewsSentiment | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class TickerDirectoryItem(BaseModel):
+    symbol: str
+    name: str | None = None
+    market: str | None = None
+    exchange: str | None = None
+    type: str | None = None
+    currency: str | None = None
+    active: bool | None = None
+
+
+class MassiveShortVolume(BaseModel):
+    trade_date: date | None = None
+    short_volume: int | None = None
+    total_volume: int | None = None
+    short_volume_ratio: float | None = None
+    exempt_volume: float | None = None
+
+
+class MassiveIndicatorPoint(BaseModel):
+    timestamp: datetime | date | None = None
+    value: float | None = None
+
+
+class MassiveMarketInsight(BaseModel):
+    symbol: str
+    provider: str = "Massive"
+    fetched_at: datetime
+    ema_12: MassiveIndicatorPoint | None = None
+    ema_26: MassiveIndicatorPoint | None = None
+    short_volume: MassiveShortVolume | None = None
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -248,5 +293,6 @@ class TickerResearch(BaseModel):
     news: list[NewsArticle] = Field(default_factory=list)
     filings: list[Filing] = Field(default_factory=list)
     tipranks: TipRanksInsight | None = None
+    massive_insight: MassiveMarketInsight | None = None
     score: ResearchScore
     provider_status: dict[str, Any] = Field(default_factory=dict)

@@ -3,6 +3,7 @@ const input = document.querySelector("#ticker-input");
 let chart;
 let currentHistoricalRows = [];
 let currentRange = "1D";
+let currentSymbol = "AAPL";
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -13,15 +14,18 @@ document.querySelectorAll(".chart-tabs button[data-range]").forEach((button) => 
   button.addEventListener("click", () => {
     currentRange = button.dataset.range;
     document.querySelectorAll(".chart-tabs button[data-range]").forEach((item) => item.classList.toggle("active", item === button));
-    renderChart(currentHistoricalRows);
+    loadRangeChart(currentSymbol, currentRange);
   });
 });
+
+input.addEventListener("input", debounce(() => loadTickerSuggestions(input.value.trim()), 250));
 
 loadUnderDollarDashboard();
 loadTrackingSummary();
 loadTicker(input.value);
 
 async function loadTicker(symbol) {
+  currentSymbol = symbol.toUpperCase();
   setStatus(`Loading ${symbol.toUpperCase()}...`);
   try {
     const response = await fetch(`/api/ticker/${encodeURIComponent(symbol)}`);
@@ -30,11 +34,52 @@ async function loadTicker(symbol) {
     }
     const data = await response.json();
     render(data);
+    loadRangeChart(data.symbol, currentRange);
     loadQuantIntelligence(data.symbol);
     loadAiStance(data.symbol);
     setStatus("Loaded. This dashboard is research support only, not personalized financial advice.");
   } catch (error) {
     setStatus(`Could not load ${symbol.toUpperCase()}: ${error.message}`);
+  }
+}
+
+async function loadRangeChart(symbol, range) {
+  try {
+    const response = await fetch(`/api/ticker/${encodeURIComponent(symbol)}/bars?range=${encodeURIComponent(range)}`);
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    const bars = await response.json();
+    if (!bars.length) {
+      throw new Error("No bars returned by Massive for this range");
+    }
+    renderChart(bars.map((bar) => ({
+      date: bar.label || bar.timestamp,
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume,
+      provider: bar.provider
+    })), { preserveRows: true });
+    setStatus(`${symbol.toUpperCase()} ${range} chart loaded from ${bars[0].provider} (${bars[0].timespan}).`);
+  } catch (error) {
+    renderChart(currentHistoricalRows);
+    setStatus(`${range} Massive bars unavailable: ${error.message}. Showing fallback chart data.`);
+  }
+}
+
+async function loadTickerSuggestions(query) {
+  if (!query || query.length < 2) return;
+  try {
+    const response = await fetch(`/api/tickers/search?q=${encodeURIComponent(query)}&limit=12`);
+    if (!response.ok) return;
+    const rows = await response.json();
+    document.querySelector("#ticker-suggestions").innerHTML = rows
+      .map((row) => `<option value="${row.symbol}">${row.name || row.exchange || ""}</option>`)
+      .join("");
+  } catch {
+    // Suggestions are helpful, not required.
   }
 }
 
@@ -111,10 +156,12 @@ async function loadUnderDollarDashboard() {
 }
 
 function render(data) {
+  currentSymbol = data.symbol;
   renderQuote(data);
   renderProfile(data.profile);
   renderScore(data.score);
   renderTechnicals(data.indicators);
+  renderMassiveInsight(data.massive_insight);
   renderTipRanks(data.tipranks);
   renderLists(data);
   renderChart(data.historical);
@@ -306,6 +353,22 @@ function renderTechnicals(indicators) {
     .join("");
 }
 
+function renderMassiveInsight(insight) {
+  const panel = document.querySelector("#massive-live-panel");
+  if (!panel) return;
+  if (!insight) {
+    panel.innerHTML = `${metricHtml("Massive Live", "Unavailable")}${metricHtml("Short Volume", "--")}`;
+    return;
+  }
+  const shortVolume = insight.short_volume || {};
+  panel.innerHTML = [
+    metricHtml("Massive EMA12", number(insight.ema_12?.value)),
+    metricHtml("Massive EMA26", number(insight.ema_26?.value)),
+    metricHtml("Short Vol Ratio", shortVolume.short_volume_ratio !== null && shortVolume.short_volume_ratio !== undefined ? `${number(shortVolume.short_volume_ratio)}%` : "--"),
+    metricHtml("Short Vol Date", shortVolume.trade_date || "--")
+  ].join("");
+}
+
 function renderTipRanks(tipranks) {
   const panel = document.querySelector("#tipranks-panel");
   if (!tipranks) {
@@ -343,9 +406,12 @@ function renderLists(data) {
   document.querySelector("#filing-list").innerHTML = filings;
 }
 
-function renderChart(rows) {
-  currentHistoricalRows = rows || [];
-  const filteredRows = filterRowsByRange(currentHistoricalRows, currentRange);
+function renderChart(rows, options = {}) {
+  if (!options.preserveRows) {
+    currentHistoricalRows = rows || [];
+  }
+  const sourceRows = options.preserveRows ? rows || [] : currentHistoricalRows;
+  const filteredRows = options.preserveRows ? sourceRows : filterRowsByRange(sourceRows, currentRange);
   const labels = filteredRows.map((row) => row.date);
   const closes = filteredRows.map((row) => row.close);
   const sma20 = movingAverage(closes, 20);
@@ -514,4 +580,12 @@ function formatValue(value) {
 function dateTime(value) {
   if (!value) return "unknown time";
   return new Date(value).toLocaleString();
+}
+
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
 }

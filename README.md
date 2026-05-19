@@ -48,8 +48,11 @@ See [docs/api-keys.md](docs/api-keys.md) for provider signup links and recommend
 - Dark top dashboard for top-performing sub-dollar stocks
 - Daily close chart with SMA overlays
 - Working chart range controls for 1D, 5D, 1M, 3M, 6M, YTD, 1Y, and All views
+- Massive custom-bar chart endpoint: `/api/ticker/{symbol}/bars?range=1D`
+- Massive ticker directory search endpoint: `/api/tickers/search?q=apple`
+- Massive EMA and short-volume insight endpoint: `/api/ticker/{symbol}/massive-insight`
 - SMA, EMA, RSI, MACD, Bollinger Bands, ATR, relative volume, 52-week distance
-- Recent provider news with credibility scoring
+- Recent provider news with credibility scoring, including Massive `/v2/reference/news` when available
 - SEC filing links for U.S. companies
 - Research classification with bull case, bear case, risk notes, and data warnings
 - Optional OpenAI/ChatGPT-style projection summary using only backend-fetched structured data

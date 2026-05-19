@@ -2,7 +2,19 @@ from datetime import date, datetime, timedelta, timezone
 
 from app.config import get_settings
 from app.providers.base import CachedHTTPClient, ProviderError
-from app.schemas.market import DataFreshness, MiniChartPoint, OHLCV, Quote, UnderDollarStock
+from app.schemas.market import (
+    ChartBar,
+    DataFreshness,
+    MassiveIndicatorPoint,
+    MassiveMarketInsight,
+    MassiveShortVolume,
+    MiniChartPoint,
+    NewsArticle,
+    OHLCV,
+    Quote,
+    TickerDirectoryItem,
+    UnderDollarStock,
+)
 
 
 class MassiveProvider:
@@ -113,6 +125,140 @@ class MassiveProvider:
                 )
             )
         return sorted(prices, key=lambda item: item.date)
+
+    async def custom_bars(self, symbol: str, range_key: str = "1D") -> list[ChartBar]:
+        config = _range_config(range_key)
+        to_date = date.today()
+        from_date = to_date - timedelta(days=config["days"])
+        data = await self.client.get_json(
+            f"{self.base_url}/v2/aggs/ticker/{symbol.upper()}/range/{config['multiplier']}/{config['timespan']}/{from_date}/{to_date}",
+            params={"adjusted": "true", "sort": "asc", "limit": 50000},
+            headers=self._auth_headers(),
+            ttl_seconds=config["ttl"],
+        )
+        rows = data.get("results") or []
+        return [
+            ChartBar(
+                timestamp=datetime.fromtimestamp(row["t"] / 1000, tz=timezone.utc),
+                label=datetime.fromtimestamp(row["t"] / 1000, tz=timezone.utc).isoformat(),
+                open=float(row["o"]),
+                high=float(row["h"]),
+                low=float(row["l"]),
+                close=float(row["c"]),
+                volume=int(row.get("v") or 0),
+                provider=self.name,
+                timespan=f"{config['multiplier']} {config['timespan']}",
+            )
+            for row in rows
+        ]
+
+    async def ticker_search(self, query: str = "", limit: int = 25) -> list[TickerDirectoryItem]:
+        data = await self.client.get_json(
+            f"{self.base_url}/v3/reference/tickers",
+            params={"market": "stocks", "active": "true", "search": query, "limit": min(max(limit, 1), 1000), "sort": "ticker"},
+            headers=self._auth_headers(),
+            ttl_seconds=86400,
+        )
+        return [
+            TickerDirectoryItem(
+                symbol=(row.get("ticker") or "").upper(),
+                name=row.get("name"),
+                market=row.get("market"),
+                exchange=row.get("primary_exchange"),
+                type=row.get("type"),
+                currency=row.get("currency_name") or row.get("currency_symbol"),
+                active=row.get("active"),
+            )
+            for row in data.get("results", [])
+            if row.get("ticker")
+        ]
+
+    async def news(self, symbol: str, limit: int = 12) -> list[NewsArticle]:
+        data = await self.client.get_json(
+            f"{self.base_url}/v2/reference/news",
+            params={"ticker": symbol.upper(), "order": "desc", "sort": "published_utc", "limit": limit},
+            headers=self._auth_headers(),
+            ttl_seconds=900,
+        )
+        articles: list[NewsArticle] = []
+        for row in data.get("results", [])[:limit]:
+            publisher = row.get("publisher") or {}
+            sentiment = _massive_sentiment(row, symbol)
+            articles.append(
+                NewsArticle(
+                    headline=row.get("title") or "Untitled Massive news item",
+                    source_name=publisher.get("name") or "Massive News",
+                    url=row.get("article_url") or row.get("amp_url") or "",
+                    published_at=row.get("published_utc"),
+                    summary=row.get("description"),
+                    provider=self.name,
+                    sentiment_score=sentiment,
+                    relevance_score=0.85,
+                    credibility_score=0.75,
+                )
+            )
+        return articles
+
+    async def ema(self, symbol: str, window: int = 12, timespan: str = "day") -> MassiveIndicatorPoint:
+        data = await self.client.get_json(
+            f"{self.base_url}/v1/indicators/ema/{symbol.upper()}",
+            params={"timespan": timespan, "adjusted": "true", "window": window, "series_type": "close", "order": "desc", "limit": 1},
+            headers=self._auth_headers(),
+            ttl_seconds=900,
+        )
+        values = (data.get("results") or {}).get("values") or []
+        if not values:
+            raise ProviderError(self.name, f"No Massive EMA{window} returned for {symbol}")
+        row = values[0]
+        timestamp = _timestamp_to_datetime(row.get("timestamp"))
+        return MassiveIndicatorPoint(timestamp=timestamp, value=_nullable_float(row.get("value")))
+
+    async def short_volume(self, symbol: str) -> MassiveShortVolume:
+        data = await self.client.get_json(
+            f"{self.base_url}/stocks/v1/short-volume",
+            params={"ticker": symbol.upper(), "limit": 1, "sort": "date.desc"},
+            headers=self._auth_headers(),
+            ttl_seconds=3600,
+        )
+        rows = data.get("results") or []
+        if not rows:
+            raise ProviderError(self.name, f"No Massive short-volume data returned for {symbol}")
+        row = rows[0]
+        return MassiveShortVolume(
+            trade_date=row.get("date"),
+            short_volume=_nullable_int(row.get("short_volume")),
+            total_volume=_nullable_int(row.get("total_volume")),
+            short_volume_ratio=_nullable_float(row.get("short_volume_ratio")),
+            exempt_volume=_nullable_float(row.get("exempt_volume")),
+        )
+
+    async def market_insight(self, symbol: str) -> MassiveMarketInsight:
+        warnings: list[str] = []
+        ema_12 = None
+        ema_26 = None
+        short_volume = None
+        for window in (12, 26):
+            try:
+                if window == 12:
+                    ema_12 = await self.ema(symbol, window=window)
+                else:
+                    ema_26 = await self.ema(symbol, window=window)
+            except ProviderError as error:
+                warnings.append(error.message)
+        try:
+            short_volume = await self.short_volume(symbol)
+        except ProviderError as error:
+            warnings.append(error.message)
+        if ema_12 is None and ema_26 is None and short_volume is None:
+            raise ProviderError(self.name, "; ".join(warnings) or f"No Massive insight data returned for {symbol}")
+        return MassiveMarketInsight(
+            symbol=symbol.upper(),
+            fetched_at=datetime.now(timezone.utc),
+            ema_12=ema_12,
+            ema_26=ema_26,
+            short_volume=short_volume,
+            warnings=warnings,
+        )
 
     async def under_dollar_leaders(self, limit: int = 10) -> list[UnderDollarStock]:
         try:
@@ -253,6 +399,26 @@ def _nullable_int(value) -> int | None:
         return None
 
 
+def _timestamp_to_datetime(value) -> datetime | date | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                return None
+    try:
+        number = int(value)
+        if number > 10_000_000_000:
+            number = number / 1000
+        return datetime.fromtimestamp(number, tz=timezone.utc)
+    except (TypeError, ValueError, OSError):
+        return None
+
+
 def _ns_to_datetime(value) -> datetime | None:
     if value is None:
         return None
@@ -267,3 +433,34 @@ def _looks_like_derivative(symbol: str) -> bool:
         return True
     suffixes = ("W", "WS", "WT", "U", "R")
     return any(symbol.endswith(suffix) for suffix in suffixes)
+
+
+def _range_config(range_key: str) -> dict[str, int | str]:
+    clean = range_key.upper()
+    if clean == "1D":
+        return {"days": 2, "multiplier": 15, "timespan": "minute", "ttl": 60}
+    if clean == "5D":
+        return {"days": 8, "multiplier": 30, "timespan": "minute", "ttl": 120}
+    if clean == "1M":
+        return {"days": 35, "multiplier": 1, "timespan": "day", "ttl": 900}
+    if clean == "3M":
+        return {"days": 100, "multiplier": 1, "timespan": "day", "ttl": 900}
+    if clean == "6M":
+        return {"days": 190, "multiplier": 1, "timespan": "day", "ttl": 900}
+    if clean == "YTD":
+        return {"days": max(1, (date.today() - date(date.today().year, 1, 1)).days + 1), "multiplier": 1, "timespan": "day", "ttl": 900}
+    if clean == "1Y":
+        return {"days": 370, "multiplier": 1, "timespan": "day", "ttl": 900}
+    return {"days": 900, "multiplier": 1, "timespan": "day", "ttl": 900}
+
+
+def _massive_sentiment(row: dict, symbol: str) -> float:
+    for insight in row.get("insights") or []:
+        if (insight.get("ticker") or "").upper() == symbol.upper():
+            sentiment = str(insight.get("sentiment") or "").lower()
+            if sentiment == "positive":
+                return 0.7
+            if sentiment == "negative":
+                return -0.7
+            return 0.0
+    return 0.0
