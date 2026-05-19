@@ -38,6 +38,7 @@ See [docs/api-keys.md](docs/api-keys.md) for provider signup links and recommend
 - Ticker research endpoint: `/api/ticker/{symbol}`
 - Data health endpoint: `/api/data-health`
 - Under-$1 movers and projections endpoint: `/api/under-dollar-leaders`
+- Top projected buy endpoint for the top 100 under-$1 universe: `/api/under-dollar-top-buy`
 - Stored latest under-$1 snapshot: `/api/under-dollar-leaders/latest`
 - Manual refresh endpoint: `POST /api/under-dollar-leaders/refresh`
 - Tracking history endpoints under `/api/tracking/*`
@@ -49,6 +50,7 @@ See [docs/api-keys.md](docs/api-keys.md) for provider signup links and recommend
 - SEC filing links for U.S. companies
 - Research classification with bull case, bear case, risk notes, and data warnings
 - Optional OpenAI/ChatGPT-style projection summary using only backend-fetched structured data
+- Buyer-behavior proxy scoring from observable market data: volume, relative-volume proxy, close strength, recent trend, and liquidity risk
 - SQLite tracking database by default, configurable via `DATABASE_URL`
 - APScheduler background refresh for repeated under-$1 scans
 

@@ -129,6 +129,67 @@ main {
   margin-top: 16px;
 }
 
+.top-buy-panel {
+  align-items: center;
+  background: #0b1115;
+  border: 1px solid #2c6a49;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.4fr) 120px minmax(320px, 0.9fr);
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.top-buy-panel h2 {
+  color: var(--green);
+  font-size: 24px;
+}
+
+.top-buy-score {
+  align-items: baseline;
+  background: #0e2419;
+  border: 1px solid #24543b;
+  border-radius: 8px;
+  color: var(--green);
+  display: flex;
+  justify-content: center;
+  padding: 18px 10px;
+}
+
+.top-buy-score span {
+  font-size: 34px;
+  font-weight: 820;
+}
+
+.behavior-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.behavior-metric {
+  background: #10171b;
+  border: 1px solid #1f2c32;
+  border-radius: 6px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.behavior-metric span {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.behavior-metric strong {
+  color: var(--ink);
+  display: block;
+  font-size: 14px;
+  margin-top: 3px;
+}
+
 .feed-panel {
   background: #0b1115;
   border: 1px solid var(--line);
@@ -453,8 +514,13 @@ pre {
   .hero-grid,
   .detail-grid,
   .evidence-columns,
-  .market-grid {
+  .market-grid,
+  .top-buy-panel {
     grid-template-columns: 1fr;
+  }
+
+  .behavior-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .leader-row {

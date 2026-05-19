@@ -161,6 +161,43 @@
         line-height: 1.42;
         margin-top: 7px;
       }
+      .top-buy-panel {
+        align-items: center;
+        border-color: #2c6a49;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(0, 1.4fr) 116px minmax(300px, .9fr);
+      }
+      .top-buy-panel h2 { color: var(--green); font-size: 23px; }
+      .top-buy-score {
+        align-items: baseline;
+        background: #0e2419;
+        border: 1px solid #24543b;
+        border-radius: 8px;
+        color: var(--green);
+        display: flex;
+        justify-content: center;
+        padding: 18px 8px;
+      }
+      .top-buy-score span { font-size: 32px; font-weight: 900; }
+      .behavior-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .behavior-metric {
+        background: var(--panel-2);
+        border: 1px solid #1f2c32;
+        border-radius: 7px;
+        padding: 9px;
+      }
+      .behavior-metric span {
+        color: var(--muted);
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+      .behavior-metric strong { display: block; margin-top: 3px; }
       .quote-price {
         font-size: 40px;
         font-weight: 850;
@@ -195,7 +232,8 @@
       }
       @media (max-width: 900px) {
         header, .panel-head { align-items: stretch; flex-direction: column; }
-        .top-grid, .hero-grid, .detail-grid { grid-template-columns: 1fr; }
+        .top-grid, .hero-grid, .detail-grid, .top-buy-panel { grid-template-columns: 1fr; }
+        .behavior-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .leader-row { grid-template-columns: 1fr 1fr; }
         .sparkline { width: 100%; }
         #api-base { width: 100%; }
@@ -218,6 +256,16 @@
 
     <main>
       <section id="status" class="status">Ready. Start the backend, add API keys, then refresh live data.</section>
+
+      <section class="panel top-buy-panel">
+        <div>
+          <p class="eyebrow">Top Projected Buy</p>
+          <h2 id="top-buy-symbol">Scanning top 100...</h2>
+          <p id="top-buy-thesis" class="muted">ChatGPT/rules analysis will rank the strongest under-$1 candidate by momentum, liquidity, and observable buyer-behavior signals.</p>
+        </div>
+        <div class="top-buy-score"><span id="top-buy-score">--</span><small>/100</small></div>
+        <div id="top-buy-behavior" class="behavior-grid"></div>
+      </section>
 
       <section class="grid top-grid">
         <article class="panel">
@@ -448,18 +496,43 @@
       }
 
       function renderFeed(data) {
-        document.querySelector("#leaders-freshness").textContent = `Generated ${dateTime(data.generated_at)}`;
+        document.querySelector("#leaders-freshness").textContent = `Checked ${data.leaders.length} under-$1 stocks. Generated ${dateTime(data.generated_at)}`;
         document.querySelector("#ai-provider").textContent = data.ai_provider || "rules engine";
         document.querySelector("#ai-summary").textContent = data.ai_summary || (data.warnings || []).join(" ");
+        renderTopProjectedBuy(data.top_projected_buy);
         document.querySelector("#leader-list").innerHTML = data.leaders.length
-          ? data.leaders.map(renderLeader).join("")
+          ? data.leaders.slice(0, 20).map(renderLeader).join("")
           : `<p class="muted">No live mover rows yet. Add FMP_API_KEY in .env, then restart the backend.</p>`;
         requestAnimationFrame(() => {
-          for (const leader of data.leaders) drawSparkline(`spark-${leader.symbol}`, leader.sparkline || [], leader.change_percent);
+          for (const leader of data.leaders.slice(0, 20)) drawSparkline(`spark-${leader.symbol}`, leader.sparkline || [], leader.change_percent);
         });
         document.querySelector("#projection-list").innerHTML = data.projections.length
           ? data.projections.map(renderProjection).join("")
           : `<p class="muted">No projections yet. Provider rows are needed before projection cards can be ranked.</p>`;
+      }
+
+      function renderTopProjectedBuy(topBuy) {
+        const selected = topBuy?.selected;
+        if (!selected) {
+          document.querySelector("#top-buy-symbol").textContent = "No candidate selected";
+          document.querySelector("#top-buy-score").textContent = "--";
+          document.querySelector("#top-buy-thesis").textContent = topBuy?.warnings?.join(" ") || "No under-$1 universe was available to rank.";
+          document.querySelector("#top-buy-behavior").innerHTML = "";
+          return;
+        }
+        const behavior = selected.buyer_behavior || {};
+        const components = selected.score_components || {};
+        document.querySelector("#top-buy-symbol").textContent = `${selected.symbol} / ${selected.label}`;
+        document.querySelector("#top-buy-score").textContent = number(selected.score);
+        document.querySelector("#top-buy-thesis").textContent = topBuy.ai_summary ? `${topBuy.ai_summary} ${selected.thesis}` : selected.thesis;
+        document.querySelector("#top-buy-behavior").innerHTML = [
+          behaviorMetric("Volume", compactNumber(behavior.reported_volume)),
+          behaviorMetric("Rel vol", `${number(behavior.relative_volume_proxy)}x`),
+          behaviorMetric("Close strength", number(behavior.close_strength_proxy)),
+          behaviorMetric("Up/down days", `${behavior.up_days_in_sparkline ?? "--"}/${behavior.down_days_in_sparkline ?? "--"}`),
+          behaviorMetric("Buyer behavior", number(components.buyer_behavior)),
+          behaviorMetric("Risk penalty", number(components.risk_penalty))
+        ].join("");
       }
 
       function renderLeader(item) {
@@ -584,9 +657,17 @@
       function fillList(selector, items) {
         document.querySelector(selector).innerHTML = (items || []).map((item) => `<li>${item}</li>`).join("");
       }
+      function behaviorMetric(label, value) {
+        return `<div class="behavior-metric"><span>${label}</span><strong>${value || "--"}</strong></div>`;
+      }
       function setStatus(message) { document.querySelector("#status").textContent = message; }
       function money(value) { return value === null || value === undefined ? "--" : `$${Number(value).toFixed(4)}`; }
       function number(value) { return value === null || value === undefined || Number.isNaN(Number(value)) ? "--" : Number(value).toFixed(2); }
+      function compactNumber(value) {
+        return value === null || value === undefined || Number.isNaN(Number(value))
+          ? "--"
+          : Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(Number(value));
+      }
       function percent(value) { return value === null || value === undefined ? null : `${number(value)}%`; }
       function formatValue(value) { return typeof value === "string" ? value : number(value); }
       function dateTime(value) { return value ? new Date(value).toLocaleString() : "unknown time"; }

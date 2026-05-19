@@ -104,6 +104,7 @@ class ResearchScore(BaseModel):
 class MiniChartPoint(BaseModel):
     date: date
     close: float
+    volume: int | None = None
 
 
 class UnderDollarStock(BaseModel):
@@ -127,6 +128,19 @@ class ProjectionItem(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     risks: list[str] = Field(default_factory=list)
     score: float
+    buyer_behavior: dict[str, Any] = Field(default_factory=dict)
+    score_components: dict[str, float] = Field(default_factory=dict)
+
+
+class TopProjectedBuy(BaseModel):
+    generated_at: datetime
+    universe_count: int
+    selected: ProjectionItem | None = None
+    candidates: list[ProjectionItem] = Field(default_factory=list)
+    ai_provider: str | None = None
+    ai_summary: str | None = None
+    methodology: str
+    warnings: list[str] = Field(default_factory=list)
 
 
 class AIResearchBrief(BaseModel):
@@ -162,6 +176,7 @@ class UnderDollarDashboard(BaseModel):
     freshness_note: str
     leaders: list[UnderDollarStock] = Field(default_factory=list)
     projections: list[ProjectionItem] = Field(default_factory=list)
+    top_projected_buy: TopProjectedBuy | None = None
     ai_summary: str | None = None
     ai_provider: str | None = None
     warnings: list[str] = Field(default_factory=list)

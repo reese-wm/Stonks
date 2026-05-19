@@ -80,17 +80,18 @@ async function loadTrackingSummary(symbol = input.value.trim() || "AAPL") {
 
 function renderUnderDollarDashboard(data) {
   document.querySelector("#leaders-freshness").textContent =
-    `${data.freshness_note} Generated ${dateTime(data.generated_at)}.`;
+    `${data.freshness_note} Checked ${data.leaders.length} under-$1 stocks. Generated ${dateTime(data.generated_at)}.`;
   document.querySelector("#ai-provider").textContent = data.ai_provider || "rules engine";
   document.querySelector("#ai-summary").textContent =
     data.ai_summary || data.warnings?.join(" ") || "Projection feed is using available provider data only.";
+  renderTopProjectedBuy(data.top_projected_buy);
 
   document.querySelector("#leader-list").innerHTML = data.leaders.length
-    ? data.leaders.map(renderLeaderRow).join("")
+    ? data.leaders.slice(0, 20).map(renderLeaderRow).join("")
     : `<p class="summary-copy">Add FMP_API_KEY in .env to load provider-fetched under-$1 movers.</p>`;
 
   requestAnimationFrame(() => {
-    for (const leader of data.leaders) {
+    for (const leader of data.leaders.slice(0, 20)) {
       drawSparkline(`spark-${leader.symbol}`, leader.sparkline || [], leader.change_percent);
     }
   });
@@ -98,6 +99,32 @@ function renderUnderDollarDashboard(data) {
   document.querySelector("#projection-list").innerHTML = data.projections.length
     ? data.projections.map(renderProjectionCard).join("")
     : `<p class="summary-copy">No projections available yet.</p>`;
+}
+
+function renderTopProjectedBuy(topBuy) {
+  const selected = topBuy?.selected;
+  if (!selected) {
+    document.querySelector("#top-buy-symbol").textContent = "No candidate selected";
+    document.querySelector("#top-buy-score").textContent = "--";
+    document.querySelector("#top-buy-thesis").textContent = topBuy?.warnings?.join(" ") || "No under-$1 universe was available to rank.";
+    document.querySelector("#top-buy-behavior").innerHTML = "";
+    return;
+  }
+  const behavior = selected.buyer_behavior || {};
+  const components = selected.score_components || {};
+  document.querySelector("#top-buy-symbol").textContent = `${selected.symbol} / ${selected.label}`;
+  document.querySelector("#top-buy-score").textContent = number(selected.score);
+  document.querySelector("#top-buy-thesis").textContent = topBuy.ai_summary
+    ? `${topBuy.ai_summary} ${selected.thesis}`
+    : selected.thesis;
+  document.querySelector("#top-buy-behavior").innerHTML = [
+    behaviorMetric("Volume", compactNumber(behavior.reported_volume)),
+    behaviorMetric("Rel vol", `${number(behavior.relative_volume_proxy)}x`),
+    behaviorMetric("Close strength", number(behavior.close_strength_proxy)),
+    behaviorMetric("Up/down days", `${behavior.up_days_in_sparkline ?? "--"}/${behavior.down_days_in_sparkline ?? "--"}`),
+    behaviorMetric("Buyer behavior", number(components.buyer_behavior)),
+    behaviorMetric("Risk penalty", number(components.risk_penalty))
+  ].join("");
 }
 
 function renderLeaderRow(item) {
@@ -280,6 +307,10 @@ function pill(text) {
   return `<span class="tracking-pill">${text}</span>`;
 }
 
+function behaviorMetric(label, value) {
+  return `<div class="behavior-metric"><span>${label}</span><strong>${value || "--"}</strong></div>`;
+}
+
 function setStatus(message) {
   document.querySelector("#status-strip").textContent = message;
 }
@@ -290,6 +321,12 @@ function money(value) {
 
 function number(value) {
   return value === null || value === undefined || Number.isNaN(Number(value)) ? "--" : Number(value).toFixed(2);
+}
+
+function compactNumber(value) {
+  return value === null || value === undefined || Number.isNaN(Number(value))
+    ? "--"
+    : Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(Number(value));
 }
 
 function percent(value) {

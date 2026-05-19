@@ -9,7 +9,7 @@ from app.providers.base import ProviderError
 from app.providers.fmp import FMPProvider
 from app.providers.massive import MassiveProvider
 from app.providers.sec_edgar import SECEdgarProvider
-from app.schemas.market import AIResearchBrief, ProjectionScenario, TickerResearch, UnderDollarDashboard
+from app.schemas.market import AIResearchBrief, ProjectionScenario, TickerResearch, TopProjectedBuy, UnderDollarDashboard
 from app.services.ai_summary import build_ai_research_brief
 from app.services.news_scoring import score_articles
 from app.services.scoring import build_research_score
@@ -124,6 +124,23 @@ async def latest_under_dollar_leaders(db: Session = Depends(get_db)) -> UnderDol
 @router.post("/under-dollar-leaders/refresh")
 async def refresh_under_dollar_leaders(db: Session = Depends(get_db)) -> UnderDollarDashboard:
     return await build_and_store_under_dollar_dashboard(db, persist=True)
+
+
+@router.get("/under-dollar-top-buy", response_model=TopProjectedBuy)
+async def under_dollar_top_buy(db: Session = Depends(get_db)) -> TopProjectedBuy:
+    dashboard = await build_and_store_under_dollar_dashboard(db, persist=True)
+    if dashboard.top_projected_buy is None:
+        return TopProjectedBuy(
+            generated_at=dashboard.generated_at,
+            universe_count=len(dashboard.leaders),
+            selected=None,
+            candidates=[],
+            ai_provider=None,
+            ai_summary=None,
+            methodology="No under-$1 candidates were available to rank.",
+            warnings=dashboard.warnings,
+        )
+    return dashboard.top_projected_buy
 
 
 @router.get("/tracking/under-dollar-history")

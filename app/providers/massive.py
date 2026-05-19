@@ -233,7 +233,7 @@ class MassiveProvider:
         for leader in leaders:
             try:
                 prices = await self.daily_prices(leader.symbol, limit=days)
-                leader.sparkline = [MiniChartPoint(date=item.date, close=item.close) for item in prices[-days:]]
+                leader.sparkline = [MiniChartPoint(date=item.date, close=item.close, volume=item.volume) for item in prices[-days:]]
             except ProviderError:
                 leader.sparkline = []
         return leaders
