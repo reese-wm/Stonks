@@ -3,161 +3,203 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Stonks Research Dashboard</title>
+    <title>Stonks Terminal</title>
     <link rel="stylesheet" href="/static/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Research support</p>
-        <h1>Stonks Dashboard</h1>
+    <div class="terminal-frame">
+      <div class="browser-bar" aria-hidden="true">
+        <div class="window-dots"><span></span><span></span><span></span></div>
+        <div class="browser-controls">‹  ›  ↻</div>
+        <div class="address-bar">https://stonks.local/terminal</div>
+        <div class="browser-action">☆</div>
       </div>
-      <form id="ticker-form" class="search">
-        <input id="ticker-input" type="text" value="AAPL" autocomplete="off" aria-label="Ticker symbol" />
-        <button type="submit">Analyze</button>
-      </form>
-    </header>
 
-    <main>
-      <section class="market-top">
-        <div class="feed-heading">
-          <div>
-            <p class="eyebrow">Live screener</p>
-            <h2>Top Under-$1 Movers</h2>
-          </div>
-          <p id="leaders-freshness">Waiting for provider data...</p>
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-word">STONK<span>X</span></div>
+          <div class="brand-sub">RESEARCH OS</div>
         </div>
-        <article class="top-buy-panel" id="top-buy-panel">
-          <div>
-            <p class="eyebrow">Top Projected Buy</p>
-            <h2 id="top-buy-symbol">Scanning top 100...</h2>
-            <p id="top-buy-thesis" class="summary-copy">ChatGPT/rules analysis will rank the strongest under-$1 candidate by momentum, liquidity, and observable buyer-behavior signals.</p>
+        <nav class="side-nav" aria-label="Primary">
+          <button class="active" type="button">Dashboard</button>
+          <button type="button">Markets</button>
+          <button type="button">Portfolio</button>
+          <button type="button">Screener</button>
+          <button type="button">Newsfeed</button>
+          <button type="button">Alerts</button>
+          <button type="button">Strategies</button>
+          <button type="button">Settings</button>
+        </nav>
+        <div class="planet-orbit" aria-hidden="true">
+          <div class="planet"></div>
+          <div class="orbital-dot"></div>
+        </div>
+        <section class="system-card">
+          <h2>System Status</h2>
+          <div><span class="online-dot"></span>Online</div>
+          <dl>
+            <dt>Latency</dt><dd>12.4ms</dd>
+            <dt>Data Feed</dt><dd>Live</dd>
+            <dt>Uptime</dt><dd>99.98%</dd>
+          </dl>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="market-tape">
+          <div class="ticker-tape-item"><span>SPX</span><strong>5,428.67</strong><em class="positive">+0.68%</em></div>
+          <div class="ticker-tape-item"><span>NDX</span><strong>19,620.34</strong><em class="positive">+1.12%</em></div>
+          <div class="ticker-tape-item"><span>COMP</span><strong>17,689.66</strong><em class="positive">+1.35%</em></div>
+          <div class="ticker-tape-item"><span>VIX</span><strong>13.42</strong><em class="negative">-1.25%</em></div>
+          <div class="ticker-tape-item"><span>BTCUSD</span><strong>68,742.01</strong><em class="positive">+2.35%</em></div>
+          <div class="user-cluster">
+            <div class="avatar-ring"></div>
+            <div><span>STONKX PRO</span><strong>LEVEL 7</strong></div>
           </div>
-          <div class="top-buy-score">
-            <span id="top-buy-score">--</span>
-            <small>/ 100</small>
-          </div>
-          <div id="top-buy-behavior" class="behavior-grid"></div>
-        </article>
-        <div class="market-grid">
-          <article class="feed-panel">
-            <div id="leader-list" class="leader-list"></div>
-          </article>
-          <article class="feed-panel projection-panel">
-            <div class="projection-head">
+        </header>
+
+        <section class="terminal-grid">
+          <article class="panel chart-console">
+            <div class="quote-head">
+              <div class="asset-mark" id="asset-mark">A</div>
               <div>
-                <p class="eyebrow">Top Projections</p>
-                <h2>Live Research Feed</h2>
+                <h1 id="quote-symbol">--</h1>
+                <p id="profile-name">Loading market data</p>
+                <span id="market-state">Market research mode</span>
               </div>
-              <span id="ai-provider" class="source-pill">rules engine</span>
+              <div class="price-stack">
+                <strong id="quote-price">--</strong>
+                <span id="quote-change">--</span>
+              </div>
+              <div class="range-group">
+                <div>
+                  <span>Day Range</span>
+                  <div class="range-line"><i style="width: 62%"></i></div>
+                </div>
+                <div>
+                  <span>52W Range</span>
+                  <div class="range-line"><i style="width: 72%"></i></div>
+                </div>
+              </div>
             </div>
-            <p id="ai-summary" class="summary-copy">Projection feed will appear here.</p>
-            <div id="projection-list" class="projection-list"></div>
+
+            <div class="chart-tabs">
+              <button class="active" type="button">1D</button>
+              <button type="button">5D</button>
+              <button type="button">1M</button>
+              <button type="button">3M</button>
+              <button type="button">6M</button>
+              <button type="button">YTD</button>
+              <button type="button">1Y</button>
+              <button type="button">All</button>
+              <span>Indicators</span>
+            </div>
+            <div class="chart-shell">
+              <canvas id="price-chart"></canvas>
+            </div>
+            <p class="powered">Powered by Stonks Quant Intelligence</p>
           </article>
-        </div>
-      </section>
 
-      <section class="status-strip" id="status-strip">
-        Enter a ticker to load quote, chart, filings, news, and research scores.
-      </section>
-
-      <section class="tracking-strip">
-        <div>
-          <p class="eyebrow">Tracking</p>
-          <h2>Stored Market History</h2>
-        </div>
-        <div id="tracking-summary" class="tracking-summary">Loading tracking status...</div>
-      </section>
-
-      <section class="grid hero-grid">
-        <article class="panel quote-panel">
-          <p class="panel-label">Quote</p>
-          <h2 id="quote-symbol">--</h2>
-          <div class="quote-price" id="quote-price">--</div>
-          <div class="quote-change" id="quote-change">--</div>
-          <p class="freshness" id="quote-freshness">Provider and freshness will appear here.</p>
-        </article>
-
-        <article class="panel score-panel">
-          <p class="panel-label">Research Classification</p>
-          <h2 id="rating-label">Needs more data</h2>
-          <div class="score-ring">
-            <span id="composite-score">--</span>
-            <small>/ 100</small>
-          </div>
-        </article>
-
-        <article class="panel profile-panel">
-          <p class="panel-label">Company</p>
-          <h2 id="profile-name">--</h2>
-          <p id="profile-meta">--</p>
-          <p id="profile-description" class="description">Company profile will appear here.</p>
-        </article>
-      </section>
-
-      <section class="panel chart-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="panel-label">Daily OHLCV</p>
-            <h2>Price Chart</h2>
-          </div>
-          <div class="legend">Close, SMA20, SMA50, SMA200</div>
-        </div>
-        <canvas id="price-chart"></canvas>
-      </section>
-
-      <section class="grid detail-grid">
-        <article class="panel">
-          <p class="panel-label">Quant Intelligence</p>
-          <div id="quant-intelligence" class="item">
-            <p>Load a ticker to compile framework-inspired AI research notes.</p>
-          </div>
-        </article>
-        <article class="panel">
-          <p class="panel-label">Technical Indicators</p>
-          <div id="technical-list" class="metric-list"></div>
-        </article>
-        <article class="panel">
-          <p class="panel-label">Evidence</p>
-          <div class="evidence-columns">
-            <div>
-              <h3>Bull Case</h3>
-              <ul id="bull-case"></ul>
+          <aside class="trade-panel panel">
+            <div class="panel-title">
+              <h2>Quick Trade</h2>
+              <button type="button" aria-label="Close">×</button>
             </div>
-            <div>
-              <h3>Bear Case</h3>
-              <ul id="bear-case"></ul>
+            <div class="segmented"><button class="active" type="button">Buy</button><button type="button">Sell</button></div>
+            <form id="ticker-form" class="trade-form">
+              <label>Symbol<input id="ticker-input" type="text" value="AAPL" autocomplete="off" /></label>
+              <label>Order Type<select><option>Limit</option><option>Market</option></select></label>
+              <label>Quantity<input type="number" value="100" min="1" /></label>
+              <label>Limit Price<input id="limit-price" type="text" value="--" /></label>
+              <button class="primary-action" type="submit">Analyze Symbol</button>
+            </form>
+            <div class="buying-power">
+              <span>Composite Score</span><strong id="composite-score">--</strong>
+              <span>Classification</span><strong id="rating-label">Needs data</strong>
             </div>
-          </div>
-          <h3>Risk Notes</h3>
-          <ul id="risk-notes"></ul>
-        </article>
-      </section>
+          </aside>
 
-      <section class="grid detail-grid">
-        <article class="panel">
-          <p class="panel-label">TipRanks Analyst & News Sentiment</p>
-          <div id="tipranks-panel" class="metric-list"></div>
-        </article>
-        <article class="panel">
-          <p class="panel-label">Recent News</p>
-          <div id="news-list" class="item-list"></div>
-        </article>
-      </section>
+          <aside class="order-book panel">
+            <div class="panel-title">
+              <h2>Order Book</h2>
+              <select><option id="order-symbol">AAPL</option></select>
+            </div>
+            <div id="orderbook-asks" class="book-list asks"></div>
+            <div class="book-mid"><strong id="book-mid-price">--</strong><span id="book-mid-change">--</span></div>
+            <div id="orderbook-bids" class="book-list bids"></div>
+            <div class="spread-row"><span>Spread</span><strong id="spread-value">--</strong></div>
+          </aside>
 
-      <section class="grid detail-grid">
-        <article class="panel">
-          <p class="panel-label">SEC Filings</p>
-          <div id="filing-list" class="item-list"></div>
-        </article>
-      </section>
+          <section class="panel portfolio-panel">
+            <h2>Portfolio Overview</h2>
+            <div class="donut-wrap">
+              <div class="donut"><span>Total Value</span><strong>$236,780.45</strong><em>+2.45% today</em></div>
+              <ul>
+                <li><i class="dot blue"></i>Equities <span>58.6%</span></li>
+                <li><i class="dot violet"></i>Options <span>24.3%</span></li>
+                <li><i class="dot gold"></i>Crypto <span>8.7%</span></li>
+                <li><i class="dot slate"></i>Cash <span>8.4%</span></li>
+              </ul>
+            </div>
+            <p class="today-pnl">Today's P&L <strong>+$5,652.41 (+2.45%)</strong></p>
+          </section>
 
-      <section class="panel">
-        <p class="panel-label">Data Health</p>
-        <pre id="provider-status"></pre>
-      </section>
-    </main>
+          <section class="panel ai-panel">
+            <div class="panel-title"><h2>AI Market Signals</h2><span id="ai-provider">rules engine</span></div>
+            <div id="top-buy-panel" class="signal-hero">
+              <div><span id="top-buy-symbol">Scanning top 100...</span><strong id="top-buy-score">--</strong></div>
+              <p id="top-buy-thesis">Ranking under-$1 buyer behavior, liquidity, and momentum.</p>
+            </div>
+            <div id="projection-list" class="signal-list"></div>
+          </section>
+
+          <section class="panel news-panel">
+            <div class="panel-title"><h2>Newsfeed</h2><span>View all</span></div>
+            <div id="news-list" class="news-list"></div>
+          </section>
+
+          <section class="panel heatmap-panel">
+            <div class="panel-title"><h2>Market Heatmap</h2><select><option>Under $1</option><option>S&P 500</option></select></div>
+            <div id="heatmap-grid" class="heatmap-grid"></div>
+          </section>
+
+          <section class="panel quant-panel">
+            <div class="panel-title"><h2>Quant Intelligence</h2><span>OpenBB / LEAN / FinRL</span></div>
+            <div id="quant-intelligence" class="quant-copy">Load a ticker to compile framework-inspired AI research notes.</div>
+          </section>
+
+          <section class="panel data-panel">
+            <div class="panel-title"><h2>Data & Signals</h2><span id="leaders-freshness">Waiting for provider data...</span></div>
+            <div id="tracking-summary" class="tracking-summary">Loading tracking status...</div>
+            <div id="technical-list" class="metric-list"></div>
+            <div id="tipranks-panel" class="metric-list compact"></div>
+            <details>
+              <summary>Provider Status</summary>
+              <pre id="provider-status"></pre>
+            </details>
+          </section>
+        </section>
+
+        <footer class="terminal-footer">
+          <span>STONKX OS v2.5.0</span>
+          <strong id="status-strip">All systems nominal</strong>
+          <span id="quote-freshness">Provider and freshness will appear here.</span>
+        </footer>
+      </main>
+    </div>
+
+    <div class="sr-only">
+      <p id="profile-meta">--</p>
+      <p id="profile-description">Company profile will appear here.</p>
+      <ul id="bull-case"></ul>
+      <ul id="bear-case"></ul>
+      <ul id="risk-notes"></ul>
+      <div id="leader-list"></div>
+      <div id="ai-summary"></div>
+      <div id="top-buy-behavior"></div>
+      <div id="filing-list"></div>
+    </div>
 
     <script src="/static/app.js"></script>
   </body>

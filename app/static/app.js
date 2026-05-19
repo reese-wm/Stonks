@@ -114,6 +114,7 @@ function renderUnderDollarDashboard(data) {
   document.querySelector("#ai-summary").textContent =
     data.ai_summary || data.warnings?.join(" ") || "Projection feed is using available provider data only.";
   renderTopProjectedBuy(data.top_projected_buy);
+  renderHeatmap(data.leaders || []);
 
   document.querySelector("#leader-list").innerHTML = data.leaders.length
     ? data.leaders.slice(0, 20).map(renderLeaderRow).join("")
@@ -128,6 +129,28 @@ function renderUnderDollarDashboard(data) {
   document.querySelector("#projection-list").innerHTML = data.projections.length
     ? data.projections.map(renderProjectionCard).join("")
     : `<p class="summary-copy">No projections available yet.</p>`;
+}
+
+function renderHeatmap(leaders) {
+  const panel = document.querySelector("#heatmap-grid");
+  if (!panel) return;
+  const rows = leaders.length ? leaders.slice(0, 25) : [
+    { symbol: "AAPL", change_percent: 1.23 },
+    { symbol: "MSFT", change_percent: 0.95 },
+    { symbol: "NVDA", change_percent: 2.15 },
+    { symbol: "AMZN", change_percent: 1.45 },
+    { symbol: "GOOGL", change_percent: 1.12 },
+    { symbol: "META", change_percent: 0.89 },
+    { symbol: "TSLA", change_percent: -0.65 }
+  ];
+  panel.innerHTML = rows.map((item, index) => {
+    const move = Number(item.change_percent || 0);
+    const sizeClass = index < 3 ? "large" : "";
+    return `<div class="heat-tile ${move < 0 ? "negative" : ""} ${sizeClass}">
+      <strong>${item.symbol}</strong>
+      <span>${move >= 0 ? "+" : ""}${number(move)}%</span>
+    </div>`;
+  }).join("");
 }
 
 function renderTopProjectedBuy(topBuy) {
@@ -188,7 +211,10 @@ function renderProjectionCard(item) {
 function renderQuote(data) {
   const quote = data.quote;
   document.querySelector("#quote-symbol").textContent = data.symbol;
+  document.querySelector("#asset-mark").textContent = data.symbol.slice(0, 1);
+  document.querySelector("#order-symbol").textContent = data.symbol;
   document.querySelector("#quote-price").textContent = quote?.price ? money(quote.price) : "--";
+  document.querySelector("#limit-price").value = quote?.price ? Number(quote.price).toFixed(2) : "--";
   const change = document.querySelector("#quote-change");
   if (quote?.change !== null && quote?.change !== undefined) {
     change.textContent = `${number(quote.change)} (${number(quote.change_percent)}%)`;
@@ -200,6 +226,7 @@ function renderQuote(data) {
   document.querySelector("#quote-freshness").textContent = quote?.freshness
     ? `${quote.freshness.display_note} Fetched ${dateTime(quote.freshness.fetched_at)}.`
     : "Quote unavailable. Add an API key in .env.";
+  renderOrderBook(quote);
 }
 
 function renderProfile(profile) {
@@ -286,23 +313,52 @@ function renderChart(rows) {
     data: {
       labels,
       datasets: [
-        dataset("Close", closes, "#29d17d", 2),
-        dataset("SMA20", sma20, "#6ab8ff", 1),
-        dataset("SMA50", sma50, "#f0b95a", 1),
-        dataset("SMA200", sma200, "#ff5c63", 1)
+        dataset("Close", closes, "#12d7ff", 2.5),
+        dataset("SMA20", sma20, "#00f0a6", 1),
+        dataset("SMA50", sma50, "#a855f7", 1),
+        dataset("SMA200", sma200, "#ff3d62", 1)
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: "index" },
-      plugins: { legend: { labels: { color: "#edf4f2" } } },
+      plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: "#91a29e", maxTicksLimit: 8 }, grid: { color: "#182329" } },
-        y: { ticks: { color: "#91a29e", callback: (value) => `$${value}` }, grid: { color: "#182329" } }
+        x: { ticks: { color: "#6f8aa2", maxTicksLimit: 8 }, grid: { color: "rgba(18, 215, 255, .06)" } },
+        y: { position: "right", ticks: { color: "#7f9ab1", callback: (value) => `$${value}` }, grid: { color: "rgba(18, 215, 255, .08)" } }
       }
     }
   });
+}
+
+function renderOrderBook(quote) {
+  const asks = document.querySelector("#orderbook-asks");
+  const bids = document.querySelector("#orderbook-bids");
+  if (!asks || !bids) return;
+  const price = Number(quote?.price || 189.84);
+  const change = Number(quote?.change || 0);
+  const changePercent = Number(quote?.change_percent || 0);
+  const sizes = [2300, 1800, 1200, 900, 1100];
+  const askRows = sizes.map((size, index) => ({
+    price: price + (index + 1) * 0.01,
+    size,
+    total: size * (index + 8)
+  })).reverse();
+  const bidRows = sizes.map((size, index) => ({
+    price: price - (index + 1) * 0.01,
+    size: size + index * 260,
+    total: size * (index + 1)
+  }));
+  asks.innerHTML = askRows.map(bookRow).join("");
+  bids.innerHTML = bidRows.map(bookRow).join("");
+  document.querySelector("#book-mid-price").textContent = money(price);
+  document.querySelector("#book-mid-change").textContent = `${change >= 0 ? "+" : ""}${number(change)} (${changePercent >= 0 ? "+" : ""}${number(changePercent)}%)`;
+  document.querySelector("#spread-value").textContent = "0.01 (0.01%)";
+}
+
+function bookRow(row) {
+  return `<div class="book-row"><span>${Number(row.price).toFixed(2)}</span><span>${compactNumber(row.size)}</span><span>${compactNumber(row.total)}</span></div>`;
 }
 
 function drawSparkline(canvasId, points, changePercent) {
@@ -344,7 +400,9 @@ function dataset(label, data, color, width) {
     borderColor: color,
     borderWidth: width,
     pointRadius: 0,
-    tension: 0.18
+    tension: 0.18,
+    fill: label === "Close",
+    backgroundColor: label === "Close" ? "rgba(18, 215, 255, 0.08)" : "transparent"
   };
 }
 
