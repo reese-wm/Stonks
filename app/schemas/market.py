@@ -200,6 +200,19 @@ class AIResearchBrief(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class AIStockStance(BaseModel):
+    symbol: str
+    stance: str
+    confidence: str = "low"
+    score: float
+    summary: str
+    bullish_evidence: list[str] = Field(default_factory=list)
+    bearish_evidence: list[str] = Field(default_factory=list)
+    watch_items: list[str] = Field(default_factory=list)
+    generated_by: str = "rules engine"
+    warnings: list[str] = Field(default_factory=list)
+
+
 class ProjectionScenario(BaseModel):
     symbol: str
     amount: float

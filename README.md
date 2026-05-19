@@ -36,6 +36,7 @@ See [docs/api-keys.md](docs/api-keys.md) for provider signup links and recommend
 ## Current MVP
 
 - Ticker research endpoint: `/api/ticker/{symbol}`
+- ChatGPT-style bullish/bearish stance endpoint: `/api/ticker/{symbol}/ai-stance`
 - Data health endpoint: `/api/data-health`
 - Under-$1 movers and projections endpoint: `/api/under-dollar-leaders`
 - Top projected buy endpoint for the top 100 under-$1 universe: `/api/under-dollar-top-buy`
@@ -46,6 +47,7 @@ See [docs/api-keys.md](docs/api-keys.md) for provider signup links and recommend
 - Quote card with provider/freshness label
 - Dark top dashboard for top-performing sub-dollar stocks
 - Daily close chart with SMA overlays
+- Working chart range controls for 1D, 5D, 1M, 3M, 6M, YTD, 1Y, and All views
 - SMA, EMA, RSI, MACD, Bollinger Bands, ATR, relative volume, 52-week distance
 - Recent provider news with credibility scoring
 - SEC filing links for U.S. companies

@@ -10,7 +10,8 @@ from app.providers.fmp import FMPProvider
 from app.providers.massive import MassiveProvider
 from app.providers.sec_edgar import SECEdgarProvider
 from app.providers.tipranks import TipRanksProvider
-from app.schemas.market import AIResearchBrief, ProjectionScenario, QuantIntelligenceReport, TickerResearch, TopProjectedBuy, UnderDollarDashboard
+from app.schemas.market import AIResearchBrief, AIStockStance, ProjectionScenario, QuantIntelligenceReport, TickerResearch, TopProjectedBuy, UnderDollarDashboard
+from app.services.ai_stance import build_ai_stock_stance
 from app.services.ai_summary import build_ai_research_brief
 from app.services.news_scoring import score_articles
 from app.services.quant_intelligence import build_quant_intelligence_report
@@ -82,6 +83,12 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
 async def ticker_ai_summary(symbol: str, db: Session = Depends(get_db)) -> AIResearchBrief:
     research = await ticker_research(symbol, db)
     return await build_ai_research_brief(research)
+
+
+@router.get("/ticker/{symbol}/ai-stance", response_model=AIStockStance)
+async def ticker_ai_stance(symbol: str, db: Session = Depends(get_db)) -> AIStockStance:
+    research = await ticker_research(symbol, db)
+    return await build_ai_stock_stance(research)
 
 
 @router.get("/ticker/{symbol}/quant-intelligence", response_model=QuantIntelligenceReport)

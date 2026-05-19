@@ -557,6 +557,7 @@ h1, h2, h3, p { margin: 0; }
 .today-pnl strong { color: var(--green); display: block; font-size: 18px; margin-top: 5px; }
 
 .signal-hero,
+.stance-card,
 .projection-card,
 .item,
 .metric {
@@ -566,14 +567,33 @@ h1, h2, h3, p { margin: 0; }
   padding: 12px;
 }
 .signal-hero { border-color: rgba(0, 240, 166, 0.22); }
-.signal-hero div {
+.signal-hero div,
+.stance-card div {
   align-items: center;
   display: flex;
   justify-content: space-between;
 }
 .signal-hero span { color: var(--green); font-weight: 780; }
 .signal-hero strong { color: var(--green); font-size: 25px; }
+.stance-card {
+  border-color: rgba(18, 215, 255, 0.18);
+  margin-top: 10px;
+}
+.stance-card span {
+  color: #91aabe;
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+.stance-card strong {
+  font-size: 18px;
+  text-transform: uppercase;
+}
+.stance-card.bullish strong { color: var(--green); }
+.stance-card.bearish strong { color: var(--red); }
+.stance-card.neutral strong { color: var(--cyan); }
 .signal-hero p,
+.stance-card p,
 .projection-card p,
 .item p,
 .quant-copy,

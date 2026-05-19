@@ -1,10 +1,20 @@
 const form = document.querySelector("#ticker-form");
 const input = document.querySelector("#ticker-input");
 let chart;
+let currentHistoricalRows = [];
+let currentRange = "1D";
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   loadTicker(input.value.trim() || "AAPL");
+});
+
+document.querySelectorAll(".chart-tabs button[data-range]").forEach((button) => {
+  button.addEventListener("click", () => {
+    currentRange = button.dataset.range;
+    document.querySelectorAll(".chart-tabs button[data-range]").forEach((item) => item.classList.toggle("active", item === button));
+    renderChart(currentHistoricalRows);
+  });
 });
 
 loadUnderDollarDashboard();
@@ -21,10 +31,43 @@ async function loadTicker(symbol) {
     const data = await response.json();
     render(data);
     loadQuantIntelligence(data.symbol);
+    loadAiStance(data.symbol);
     setStatus("Loaded. This dashboard is research support only, not personalized financial advice.");
   } catch (error) {
     setStatus(`Could not load ${symbol.toUpperCase()}: ${error.message}`);
   }
+}
+
+async function loadAiStance(symbol) {
+  const panel = document.querySelector("#ai-stock-stance");
+  panel.className = "stance-card neutral";
+  panel.innerHTML = `<div><span>ChatGPT Stance</span><strong>Loading</strong></div><p>Reviewing bullish and bearish evidence for ${symbol.toUpperCase()}.</p>`;
+  try {
+    const response = await fetch(`/api/ticker/${encodeURIComponent(symbol)}/ai-stance`);
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    const stance = await response.json();
+    renderAiStance(stance);
+  } catch (error) {
+    panel.innerHTML = `<div><span>ChatGPT Stance</span><strong>Unavailable</strong></div><p>${error.message}</p>`;
+  }
+}
+
+function renderAiStance(stance) {
+  const panel = document.querySelector("#ai-stock-stance");
+  const stateClass = stance.stance === "bullish" ? "bullish" : stance.stance === "bearish" ? "bearish" : "neutral";
+  const evidence = [
+    ...(stance.bullish_evidence || []).slice(0, 1),
+    ...(stance.bearish_evidence || []).slice(0, 1)
+  ].filter(Boolean);
+  panel.className = `stance-card ${stateClass}`;
+  panel.innerHTML = `
+    <div><span>ChatGPT Stance</span><strong>${stance.stance}</strong></div>
+    <p>${stance.summary}</p>
+    <ul>${evidence.map((item) => `<li>${item}</li>`).join("")}</ul>
+    <p class="description">${stance.generated_by} / confidence ${stance.confidence} / score ${number(stance.score)}</p>
+  `;
 }
 
 async function loadQuantIntelligence(symbol) {
@@ -301,8 +344,10 @@ function renderLists(data) {
 }
 
 function renderChart(rows) {
-  const labels = rows.map((row) => row.date);
-  const closes = rows.map((row) => row.close);
+  currentHistoricalRows = rows || [];
+  const filteredRows = filterRowsByRange(currentHistoricalRows, currentRange);
+  const labels = filteredRows.map((row) => row.date);
+  const closes = filteredRows.map((row) => row.close);
   const sma20 = movingAverage(closes, 20);
   const sma50 = movingAverage(closes, 50);
   const sma200 = movingAverage(closes, 200);
@@ -330,6 +375,23 @@ function renderChart(rows) {
       }
     }
   });
+}
+
+function filterRowsByRange(rows, range) {
+  if (!rows.length) return [];
+  const sorted = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const end = new Date(sorted[sorted.length - 1].date);
+  const start = new Date(end);
+  if (range === "1D") return sorted.slice(-2);
+  if (range === "5D") return sorted.slice(-5);
+  if (range === "1M") start.setMonth(start.getMonth() - 1);
+  else if (range === "3M") start.setMonth(start.getMonth() - 3);
+  else if (range === "6M") start.setMonth(start.getMonth() - 6);
+  else if (range === "YTD") start.setMonth(0, 1);
+  else if (range === "1Y") start.setFullYear(start.getFullYear() - 1);
+  else return sorted;
+  const filtered = sorted.filter((row) => new Date(row.date) >= start);
+  return filtered.length ? filtered : sorted.slice(-2);
 }
 
 function renderOrderBook(quote) {
