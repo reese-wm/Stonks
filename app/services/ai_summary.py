@@ -67,6 +67,7 @@ def _deterministic_brief(research: TickerResearch) -> AIResearchBrief:
             *(item.provider for item in research.news),
             *(item.source for item in research.filings),
             research.quote.freshness.provider if research.quote else "none",
+            research.tipranks.provider if research.tipranks else "none",
         }
     )
     price = research.quote.price if research.quote else None
@@ -101,6 +102,7 @@ def _compact_research_payload(research: TickerResearch) -> dict:
         "indicators": research.indicators.model_dump(mode="json"),
         "news": [item.model_dump(mode="json") for item in research.news[:10]],
         "filings": [item.model_dump(mode="json") for item in research.filings[:10]],
+        "tipranks": research.tipranks.model_dump(mode="json") if research.tipranks else None,
         "score": research.score.model_dump(mode="json"),
         "provider_status": research.provider_status,
     }

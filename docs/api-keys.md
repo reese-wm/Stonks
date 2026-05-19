@@ -56,6 +56,15 @@ Use for broad news discovery and cross-checking source coverage.
 - Docs: https://newsapi.org/docs
 - Env var: `NEWS_API_KEY`
 
+### TipRanks-style Sentiment and Targets
+
+The optional TipRanks provider is adapted from the MIT-licensed `janlukasschroeder/tipranks-api-v2` endpoint pattern. It does not use an official API key. It calls TipRanks public web JSON endpoints for analyst targets and news sentiment.
+
+- Env var: `TIPRANKS_ENABLED=true`
+- Optional env var: `TIPRANKS_USER_AGENT`
+- Optional env var: `TIPRANKS_COOKIE`
+- Notes: only enable this if your use is permitted by TipRanks terms. If TipRanks returns `403 Forbidden`, the app keeps running and marks TipRanks data unavailable.
+
 ## Later Upgrades
 
 ### Polygon.io

@@ -9,9 +9,11 @@ from app.providers.base import ProviderError
 from app.providers.fmp import FMPProvider
 from app.providers.massive import MassiveProvider
 from app.providers.sec_edgar import SECEdgarProvider
-from app.schemas.market import AIResearchBrief, ProjectionScenario, TickerResearch, TopProjectedBuy, UnderDollarDashboard
+from app.providers.tipranks import TipRanksProvider
+from app.schemas.market import AIResearchBrief, ProjectionScenario, QuantIntelligenceReport, TickerResearch, TopProjectedBuy, UnderDollarDashboard
 from app.services.ai_summary import build_ai_research_brief
 from app.services.news_scoring import score_articles
+from app.services.quant_intelligence import build_quant_intelligence_report
 from app.services.scoring import build_research_score
 from app.services.scenario_projection import build_projection_scenario
 from app.services.scheduler import scheduler_status
@@ -39,6 +41,7 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
     massive = MassiveProvider()
     alpha = AlphaVantageProvider()
     sec = SECEdgarProvider()
+    tipranks = TipRanksProvider()
 
     quote = await _first_success("quote", symbol, provider_status, massive, fmp, alpha)
     save_quote_snapshot(db, quote)
@@ -51,6 +54,7 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
     )
     news = score_articles([article for result in news_results if result for article in result])
     filings = await _optional_call(sec.company_filings(symbol), provider_status, "SEC filings") or []
+    tipranks_insight = await _optional_call(tipranks.insight(symbol), provider_status, "TipRanks insights")
 
     if quote is None:
         warnings.append("Quote is unavailable. Add MASSIVE_API_KEY, FMP_API_KEY, or ALPHA_VANTAGE_API_KEY in .env.")
@@ -58,7 +62,7 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
         warnings.append("Historical OHLCV data is unavailable, so technical indicators are incomplete.")
 
     indicators = calculate_indicators(historical)
-    score = build_research_score(quote, indicators, news, data_warnings=warnings)
+    score = build_research_score(quote, indicators, news, tipranks=tipranks_insight, data_warnings=warnings)
 
     return TickerResearch(
         symbol=symbol,
@@ -68,6 +72,7 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
         indicators=indicators,
         news=news,
         filings=filings,
+        tipranks=tipranks_insight,
         score=score,
         provider_status=provider_status,
     )
@@ -77,6 +82,12 @@ async def ticker_research(symbol: str, db: Session = Depends(get_db)) -> TickerR
 async def ticker_ai_summary(symbol: str, db: Session = Depends(get_db)) -> AIResearchBrief:
     research = await ticker_research(symbol, db)
     return await build_ai_research_brief(research)
+
+
+@router.get("/ticker/{symbol}/quant-intelligence", response_model=QuantIntelligenceReport)
+async def ticker_quant_intelligence(symbol: str, db: Session = Depends(get_db)) -> QuantIntelligenceReport:
+    research = await ticker_research(symbol, db)
+    return await build_quant_intelligence_report(research)
 
 
 @router.get("/ticker/{symbol}/projection-scenario", response_model=ProjectionScenario)
@@ -100,6 +111,7 @@ async def data_health(db: Session = Depends(get_db)) -> dict[str, object]:
         "Finnhub": "configured" if FMPProvider().settings.finnhub_api_key else "missing FINNHUB_API_KEY",
         "NewsAPI": "configured" if FMPProvider().settings.news_api_key else "missing NEWS_API_KEY",
         "OpenAI": "configured" if FMPProvider().settings.openai_api_key else "missing OPENAI_API_KEY",
+        "TipRanks": "enabled" if FMPProvider().settings.tipranks_enabled else "disabled; set TIPRANKS_ENABLED=true if your use is permitted",
         "SEC EDGAR": "configured",
     }
     return {
@@ -107,7 +119,7 @@ async def data_health(db: Session = Depends(get_db)) -> dict[str, object]:
         "cache": "file cache in data/cache",
         "database": data_health_summary(db),
         "scheduler": scheduler_status(),
-        "policy": "Official/licensed APIs only. No scraping TradingView, Yahoo Finance, Seeking Alpha, or Morningstar.",
+        "policy": "Official/licensed APIs preferred. Optional TipRanks integration uses public web JSON endpoints and should only be enabled when your use is permitted by TipRanks terms.",
     }
 
 

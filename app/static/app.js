@@ -20,9 +20,37 @@ async function loadTicker(symbol) {
     }
     const data = await response.json();
     render(data);
+    loadQuantIntelligence(data.symbol);
     setStatus("Loaded. This dashboard is research support only, not personalized financial advice.");
   } catch (error) {
     setStatus(`Could not load ${symbol.toUpperCase()}: ${error.message}`);
+  }
+}
+
+async function loadQuantIntelligence(symbol) {
+  const panel = document.querySelector("#quant-intelligence");
+  panel.innerHTML = `<p>Compiling Quant Intelligence...</p>`;
+  try {
+    const response = await fetch(`/api/ticker/${encodeURIComponent(symbol)}/quant-intelligence`);
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    const report = await response.json();
+    panel.innerHTML = `
+      <p>${report.summary}</p>
+      <div class="quant-score-grid">
+        ${metricHtml("Data", number(report.data_coverage_score))}
+        ${metricHtml("Backtest", number(report.backtest_readiness_score))}
+        ${metricHtml("ML ready", number(report.ml_readiness_score))}
+      </div>
+      <h3>Signal Stack</h3>
+      <ul>${(report.signal_stack || []).slice(0, 3).map((item) => `<li>${item}</li>`).join("")}</ul>
+      <h3>Backtest Plan</h3>
+      <ul>${(report.backtest_plan || []).slice(0, 3).map((item) => `<li>${item}</li>`).join("")}</ul>
+      <p class="description">${report.generated_by} / Inspired by OpenBB, Backtrader, Zipline, FinRL, and LEAN patterns.</p>
+    `;
+  } catch (error) {
+    panel.innerHTML = `<p>Quant Intelligence unavailable: ${error.message}</p>`;
   }
 }
 
@@ -44,6 +72,7 @@ function render(data) {
   renderProfile(data.profile);
   renderScore(data.score);
   renderTechnicals(data.indicators);
+  renderTipRanks(data.tipranks);
   renderLists(data);
   renderChart(data.historical);
   document.querySelector("#provider-status").textContent = JSON.stringify(data.provider_status, null, 2);
@@ -207,6 +236,26 @@ function renderTechnicals(indicators) {
     .join("");
 }
 
+function renderTipRanks(tipranks) {
+  const panel = document.querySelector("#tipranks-panel");
+  if (!tipranks) {
+    panel.innerHTML = `<div class="metric"><span>Status</span><strong>Disabled or unavailable</strong></div>`;
+    return;
+  }
+  const targets = tipranks.price_targets || {};
+  const sentiment = tipranks.news_sentiment || {};
+  panel.innerHTML = [
+    metricHtml("Mean target", money(targets.mean)),
+    metricHtml("Median target", money(targets.median)),
+    metricHtml("Target range", targets.lowest && targets.highest ? `${money(targets.lowest)} / ${money(targets.highest)}` : "--"),
+    metricHtml("Estimates", targets.number_of_estimates ?? "--"),
+    metricHtml("Bullish news", sentiment.bullish_percent !== null && sentiment.bullish_percent !== undefined ? `${number(sentiment.bullish_percent * 100)}%` : "--"),
+    metricHtml("Bearish news", sentiment.bearish_percent !== null && sentiment.bearish_percent !== undefined ? `${number(sentiment.bearish_percent * 100)}%` : "--"),
+    metricHtml("News buzz", number(sentiment.buzz)),
+    metricHtml("Articles/week", sentiment.articles_in_last_week ?? "--")
+  ].join("");
+}
+
 function renderLists(data) {
   const news = data.news.length
     ? data.news
@@ -305,6 +354,10 @@ function fillList(selector, items) {
 
 function pill(text) {
   return `<span class="tracking-pill">${text}</span>`;
+}
+
+function metricHtml(label, value) {
+  return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
 function behaviorMetric(label, value) {

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     twelvedata_api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-5.2"
+    tipranks_enabled: bool = False
+    tipranks_cookie: str = ""
+    tipranks_user_agent: str = "StonksResearch/1.0"
     database_url: str = "sqlite:///./data/stonks.db"
     under_dollar_refresh_seconds: int = 300
     sec_user_agent: str = "Stonks research app contact@example.com"

@@ -1,4 +1,4 @@
-from app.schemas.market import IndicatorSnapshot, NewsArticle, Quote, ResearchScore
+from app.schemas.market import IndicatorSnapshot, NewsArticle, Quote, ResearchScore, TipRanksInsight
 
 
 def build_research_score(
@@ -6,6 +6,7 @@ def build_research_score(
     indicators: IndicatorSnapshot,
     news: list[NewsArticle],
     *,
+    tipranks: TipRanksInsight | None = None,
     data_warnings: list[str] | None = None,
 ) -> ResearchScore:
     bull_case: list[str] = []
@@ -69,8 +70,36 @@ def build_research_score(
             risk_notes.append("ATR indicates medium volatility.")
 
     news_score = _news_score(news)
+    if tipranks and tipranks.news_sentiment:
+        sentiment = tipranks.news_sentiment
+        if sentiment.company_news_score is not None:
+            news_score = _clamp((news_score * 0.55) + (sentiment.company_news_score * 100 * 0.45))
+        if sentiment.bullish_percent is not None and sentiment.bearish_percent is not None:
+            if sentiment.bullish_percent > sentiment.bearish_percent:
+                bull_case.append(f"TipRanks news sentiment skews bullish at {sentiment.bullish_percent * 100:.1f}%.")
+            elif sentiment.bearish_percent > sentiment.bullish_percent:
+                bear_case.append(f"TipRanks news sentiment skews bearish at {sentiment.bearish_percent * 100:.1f}%.")
+        if sentiment.articles_in_last_week:
+            bull_case.append(f"TipRanks reports {sentiment.articles_in_last_week} articles in the last week.")
+
+    if tipranks and tipranks.price_targets and quote and quote.price:
+        targets = tipranks.price_targets
+        if targets.mean:
+            upside = (targets.mean - quote.price) / quote.price * 100
+            if upside > 15:
+                valuation += 10
+                bull_case.append(f"TipRanks mean analyst target implies {upside:.1f}% upside from the displayed price.")
+            elif upside < -10:
+                valuation -= 10
+                bear_case.append(f"TipRanks mean analyst target implies {abs(upside):.1f}% downside from the displayed price.")
+        if targets.number_of_estimates < 3:
+            risk += 6
+            risk_notes.append("TipRanks analyst target sample is small.")
+
     if not news:
         warnings.append("Recent news data is missing.")
+    if tipranks is None:
+        warnings.append("TipRanks analyst/news sentiment data is unavailable or disabled.")
 
     fundamental = 50.0
     valuation = 50.0

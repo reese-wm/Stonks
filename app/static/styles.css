@@ -432,6 +432,13 @@ main {
   margin-top: 14px;
 }
 
+.quant-score-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
 .metric {
   background: #0b1115;
   border: 1px solid var(--line);
@@ -534,5 +541,9 @@ pre {
   .search input {
     flex: 1;
     width: auto;
+  }
+
+  .quant-score-grid {
+    grid-template-columns: 1fr;
   }
 }

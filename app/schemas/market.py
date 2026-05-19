@@ -101,6 +101,50 @@ class ResearchScore(BaseModel):
     data_warnings: list[str] = Field(default_factory=list)
 
 
+class TipRanksPriceTargets(BaseModel):
+    mean: float | None = None
+    median: float | None = None
+    highest: float | None = None
+    lowest: float | None = None
+    number_of_estimates: int = 0
+
+
+class TipRanksNewsSentiment(BaseModel):
+    bullish_percent: float | None = None
+    bearish_percent: float | None = None
+    articles_in_last_week: int | None = None
+    weekly_average: float | None = None
+    buzz: float | None = None
+    sector_average_bullish_percent: float | None = None
+    sector_average_news_score: float | None = None
+    company_news_score: float | None = None
+
+
+class TipRanksInsight(BaseModel):
+    symbol: str
+    provider: str = "TipRanks"
+    fetched_at: datetime
+    price_targets: TipRanksPriceTargets | None = None
+    news_sentiment: TipRanksNewsSentiment | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class QuantIntelligenceReport(BaseModel):
+    symbol: str
+    generated_at: datetime
+    generated_by: str = "rules engine"
+    summary: str
+    data_coverage_score: float
+    backtest_readiness_score: float
+    ml_readiness_score: float
+    signal_stack: list[str] = Field(default_factory=list)
+    backtest_plan: list[str] = Field(default_factory=list)
+    ai_workflow_notes: list[str] = Field(default_factory=list)
+    risk_controls: list[str] = Field(default_factory=list)
+    open_source_inspiration: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class MiniChartPoint(BaseModel):
     date: date
     close: float
@@ -190,5 +234,6 @@ class TickerResearch(BaseModel):
     indicators: IndicatorSnapshot
     news: list[NewsArticle] = Field(default_factory=list)
     filings: list[Filing] = Field(default_factory=list)
+    tipranks: TipRanksInsight | None = None
     score: ResearchScore
     provider_status: dict[str, Any] = Field(default_factory=dict)
